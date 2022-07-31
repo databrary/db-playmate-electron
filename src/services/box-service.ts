@@ -36,28 +36,26 @@ const getAuthenticationURL = () => {
 const refreshTokens = async () => {
   const refreshToken = await keytar.getPassword(keytarService, keytarAccount);
 
-  if (refreshToken) {
-    const refreshOptions = {
-      grant_type: 'refresh_token',
-      client_id: BOX_CLIENT_ID,
-      refresh_token: refreshToken,
-      client_secret: BOX_CLIENT_SECRET,
-    };
+  if (!refreshToken) throw new Error('No available refresh token.');
 
-    try {
-      const response = await axios.post(
-        `https://api.box.com/oauth2/token`,
-        querystring.stringify(refreshOptions)
-      );
+  const refreshOptions = {
+    grant_type: 'refresh_token',
+    client_id: BOX_CLIENT_ID,
+    refresh_token: refreshToken,
+    client_secret: BOX_CLIENT_SECRET,
+  };
 
-      accessToken = response.data.access_token;
-    } catch (error) {
-      await logout();
+  try {
+    const response = await axios.post(
+      `https://api.box.com/oauth2/token`,
+      querystring.stringify(refreshOptions)
+    );
 
-      throw error;
-    }
-  } else {
-    throw new Error('No available refresh token.');
+    accessToken = response.data.access_token;
+  } catch (error) {
+    await logout();
+
+    throw error;
   }
 };
 

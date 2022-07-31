@@ -1,8 +1,5 @@
 import { useState } from 'react';
 import { Accordion, Button, Form, ListGroup } from 'react-bootstrap';
-import { useAppSelector } from '../hooks';
-import { getSessionParticipant } from '../slices';
-import { RootState } from '../store';
 import { Asset as AssetType, Participant } from '../types';
 import AccordionHeader from './AccordionHeader';
 import Asset from './Asset';
@@ -21,12 +18,13 @@ const Session = ({
   eventKey,
 }: Props) => {
   const [checkAll, setCheckAll] = useState(false);
-  // const participantList = useAppSelector((state: RootState) =>
-  //   getSessionParticipant(state, Number(sessionId))
-  // );
 
   const onCheckAllClick = (e: any) => {
     setCheckAll(e.target.checked);
+  };
+
+  const onDownloadClick = () => {
+    window.electron.ipcRenderer.invoke('downloadAssets', assetList);
   };
 
   const getSessionLabel = (
@@ -60,7 +58,11 @@ const Session = ({
               className="mx-2 me-auto"
               aria-label="option 1"
             />
-            <Button className="bi bi-cloud-download" disabled={!checkAll} />
+            <Button
+              className="bi bi-cloud-download"
+              disabled={!checkAll}
+              onClick={onDownloadClick}
+            />
           </ListGroup.Item>
           {(assetList || []).map((asset, idx) => (
             <Asset key={idx} asset={asset} checked={checkAll} />

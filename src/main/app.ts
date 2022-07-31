@@ -9,12 +9,12 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
-import { login } from '../services/databrary-service';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import { getCookies, getVolumeInfo } from '../services/databrary-service';
 
 export default class AppUpdater {
   constructor() {
@@ -25,12 +25,6 @@ export default class AppUpdater {
 }
 
 let appWindow: BrowserWindow | null = null;
-
-ipcMain.on('ipc-example', async (event, arg) => {
-  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
-  console.log(msgTemplate(arg));
-  event.reply('ipc-example', msgTemplate('pong'));
-});
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -57,6 +51,22 @@ const installExtensions = async () => {
     .catch(console.log);
 };
 
+ipcMain.handle('downloadAssets', async (event, args) => {
+  if (!getCookies() || !appWindow)
+    throw Error('You must be logged into Databrary');
+
+  const result = await dialog.showOpenDialog(appWindow, {
+    properties: ['openDirectory'],
+  });
+  console.log('directories selected', result.filePaths);
+});
+
+ipcMain.handle('volumeInfo', async (event, args) => {
+  if (!getCookies()) throw Error('You must be logged into Databrary');
+  const volumeInfo = await getVolumeInfo(args[0]);
+  return volumeInfo;
+});
+
 export const createAppWindow = async () => {
   if (isDebug) {
     await installExtensions();
@@ -69,13 +79,6 @@ export const createAppWindow = async () => {
   const getAssetPath = (...paths: string[]): string => {
     return path.join(RESOURCES_PATH, ...paths);
   };
-
-  // try {
-  //   await login('DATABRARY_EMAIL', 'DATABRARY_PASSWORD');
-  //   console.log('Databrary logged in');
-  // } catch (error) {
-  //   console.log('Error logging to Databrary', error);
-  // }
 
   appWindow = new BrowserWindow({
     show: false,

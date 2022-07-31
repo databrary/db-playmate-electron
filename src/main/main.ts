@@ -8,19 +8,30 @@
  * When running `npm run build` or `npm run build:main`, this file is compiled to
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
-import { app } from 'electron';
+import { app, ipcMain } from 'electron';
 import { refreshTokens } from '../services/box-service';
 import { createAuthWindow } from './auth';
 import { createAppWindow } from './app';
+import { login } from '../services/databrary-service';
+import envVariables from '../../env.json';
+
+const { DATABRARY_USERNAME, DATABRARY_PASSWORD } = envVariables;
 
 const showWindow = async () => {
   try {
+    await login(DATABRARY_USERNAME, DATABRARY_PASSWORD);
     await refreshTokens();
     createAppWindow();
   } catch (error) {
     createAuthWindow();
   }
 };
+
+ipcMain.on('ipc-example', async (event, arg) => {
+  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
+  console.log(msgTemplate(arg));
+  event.reply('ipc-example', msgTemplate('pong'));
+});
 
 /**
  * Add event listeners...

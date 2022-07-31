@@ -4,7 +4,6 @@ import { IVolumeInfo, IRecord } from '../../interfaces';
 import { Asset, Participant } from '../types';
 import AccordionHeader from './AccordionHeader';
 import Session from './Session';
-// import "./Custom.css";
 
 type Props = {
   volumeId: string;
@@ -23,14 +22,6 @@ const Volume = ({
   const [assetList, setAssetList] = useState<Asset[]>([]);
   const [participantList, setParticipantList] = useState<Participant[]>([]);
   const [volumeInfo, setVolumeInfo] = useState<IVolumeInfo>({} as IVolumeInfo);
-  // const { data: assetList, isFetching: isGetAssetsFetching } =
-  //   useGetAssetsQuery({
-  //     volumeId,
-  //   });
-  // const { data: volumeInfo, isFetching: isVolumeInfoFetching } =
-  //   useGetVolumeInfoQuery({
-  //     volumeId,
-  //   });
 
   const getAssetsBySession = (assetList: Asset[]): Record<number, Asset[]> => {
     if (!assetList) return {};
@@ -96,10 +87,10 @@ const Volume = ({
 
   useEffect(() => {
     if (!volumeId) return;
-    window.electron.databrary
-      .getVolumeInfo('ipc-example', volumeId)
+    window.electron.ipcRenderer
+      .invoke<IVolumeInfo>('volumeInfo', [volumeId])
       .then((data) => setVolumeInfo(data))
-      .catch((error) => console.log('Error', error));
+      .catch((error) => console.log('ERROR', error));
   }, [volumeId]);
 
   useEffect(() => {
@@ -136,7 +127,7 @@ const Volume = ({
   //   return <Spinner animation="border" />;
 
   return (
-    <Accordion.Item eventKey={eventkey}>
+    <Accordion.Item eventKey={eventkey} className={className} style={style}>
       <Accordion.Header>
         <AccordionHeader
           label={getVolumeLabel()}
