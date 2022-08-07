@@ -1,7 +1,7 @@
 import { CSSProperties, useEffect, useState } from 'react';
 import { Accordion, Spinner } from 'react-bootstrap';
 import { IVolumeInfo, IRecord } from '../../interfaces';
-import { Asset, Participant } from '../types';
+import { Asset, Participant } from '../../types';
 import AccordionHeader from './AccordionHeader';
 import Session from './Session';
 
@@ -110,6 +110,8 @@ const Volume = ({
           assetName: asset.name,
           sessionId: container.id,
           sessionName: container.name,
+          percentage: undefined,
+          path: undefined,
         }))
       )
     );
@@ -122,7 +124,7 @@ const Volume = ({
   const getVolumeLabel = () => {
     return `Volume ${volumeId} ${volumeName ? `- ${volumeName}` : ``}`;
   };
-
+  // TODO: ADD SPINNER
   // if (isGetAssetsFetching || isVolumeInfoFetching)
   //   return <Spinner animation="border" />;
 

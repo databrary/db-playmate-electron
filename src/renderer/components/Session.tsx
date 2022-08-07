@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Accordion, Button, Form, ListGroup } from 'react-bootstrap';
-import { Asset as AssetType, Participant } from '../types';
+import { Asset as AssetType, Participant } from '../../types';
 import AccordionHeader from './AccordionHeader';
 import Asset from './Asset';
 
@@ -18,13 +18,33 @@ const Session = ({
   eventKey,
 }: Props) => {
   const [checkAll, setCheckAll] = useState(false);
+  const [assetMap, setAssetMap] = useState<Record<number, AssetType>>();
+  const [assetCount, setAssetCount] = useState(0);
 
   const onCheckAllClick = (e: any) => {
     setCheckAll(e.target.checked);
   };
 
-  const onDownloadClick = () => {
-    window.electron.ipcRenderer.invoke('downloadAssets', assetList);
+  const handleAssetDownloadEvents = (...args: unknown[]) => {
+    if (!args) return;
+    console.log('ARGS', args);
+
+    const newAsset = (args as any[])[0];
+    if (!newAsset) return;
+
+    setAssetMap({
+      ...assetMap,
+      [newAsset.assetid]: { ...newAsset },
+    });
+  };
+
+  const handleAssetDownloadDoneEvent = (...args: unknown[]) => {
+    window.electron.ipcRenderer.removeListener(
+      'assetDownloadStarted',
+      handleAssetDownloadEvents
+    );
+    window.electron.ipcRenderer.removeAllListeners('assetDownloadProgress');
+    window.electron.ipcRenderer.removeAllListeners('assetDownloadProgress');
   };
 
   const getSessionLabel = (
@@ -40,12 +60,33 @@ const Session = ({
     }`;
   };
 
+  const buildAssetMap = (assetList: AssetType[]): Record<number, AssetType> => {
+    return assetList.reduce(
+      (previous, current) => ({ ...previous, [current.assetId]: current }),
+      {}
+    );
+  };
+
+  useEffect(() => {
+    if (!assetList) return;
+    setAssetCount(assetList.length);
+    setAssetMap(buildAssetMap(assetList));
+  }, [assetList]);
+
+  useEffect(() => {
+    // Cleanup
+    // eslint-disable-next-line consistent-return
+    // return () => {
+    // };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <Accordion.Item eventKey={eventKey}>
       <Accordion.Header>
         <AccordionHeader
           label={getSessionLabel(sessionId, participantList)}
-          badgeValue={(assetList || []).length}
+          badgeValue={assetCount}
         />
       </Accordion.Header>
       <Accordion.Body>
@@ -59,12 +100,13 @@ const Session = ({
               aria-label="option 1"
             />
             <Button
-              className="bi bi-cloud-download"
-              disabled={!checkAll}
-              onClick={onDownloadClick}
+              variant="light"
+              className="bi bi-cloud-download bg-transparent"
+              // disabled={!checkAll}
+              disabled={false}
             />
           </ListGroup.Item>
-          {(assetList || []).map((asset, idx) => (
+          {(Object.values(assetMap || {}) || []).map((asset, idx) => (
             <Asset key={idx} asset={asset} checked={checkAll} />
           ))}
         </ListGroup>

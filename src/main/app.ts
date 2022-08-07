@@ -12,9 +12,14 @@ import path from 'path';
 import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
+import { Asset } from 'types';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { getCookies, getVolumeInfo } from '../services/databrary-service';
+import {
+  getCookies,
+  getVolumeInfo,
+  downloadAssetPromise,
+} from '../services/databrary-service';
 
 export default class AppUpdater {
   constructor() {
@@ -51,14 +56,62 @@ const installExtensions = async () => {
     .catch(console.log);
 };
 
-ipcMain.handle('downloadAssets', async (event, args) => {
+const onAssetDownloadStarted = (asset: Asset) => {
+  if (!appWindow) return;
+
+  appWindow.webContents.send('assetDownloadStarted', asset);
+};
+
+const onAssetDownloadProgress = (asset: Asset) => {
+  if (!appWindow) return;
+
+  appWindow.webContents.send('assetDownloadProgress', asset);
+};
+
+const onAssetDowmloadDone = (asset: Asset) => {
+  if (!appWindow) return;
+
+  appWindow.webContents.send('assetDownloadDone', asset);
+};
+
+const onAssetDowmloadError = (asset: Asset, error: unknown) => {
+  if (!appWindow) return;
+
+  appWindow.webContents.send('assetDownloadError', {
+    error,
+  });
+};
+
+ipcMain.handle('downloadAssets', async (event, args: Asset[]) => {
   if (!getCookies() || !appWindow)
     throw Error('You must be logged into Databrary');
 
   const result = await dialog.showOpenDialog(appWindow, {
     properties: ['openDirectory'],
   });
-  console.log('directories selected', result.filePaths);
+
+  const promiseList = [];
+  for (const asset of args) {
+    const localFilePath = path.resolve(
+      result.filePaths[0],
+      `${asset.assetName}.mp4`
+    );
+
+    promiseList.push(
+      downloadAssetPromise(
+        asset,
+        localFilePath,
+        onAssetDownloadStarted,
+        onAssetDownloadProgress,
+        onAssetDowmloadDone,
+        onAssetDowmloadError
+      )
+    );
+  }
+
+  Promise.all(promiseList).catch((error) => {
+    console.error('An error occured while download Assets', error);
+  });
 });
 
 ipcMain.handle('volumeInfo', async (event, args) => {

@@ -4,9 +4,17 @@ export type Channels =
   | 'ipc-example'
   | 'databrary'
   | 'volumeInfo'
-  | 'downloadAssets';
+  | 'downloadAssets'
+  | 'assetDownloadStarted'
+  | 'assetDownloadProgress';
 contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
+    removeListener(channel: Channels, listener: (...args: any[]) => void) {
+      ipcRenderer.removeListener(channel, listener);
+    },
+    removeAllListeners(channel: Channels) {
+      ipcRenderer.removeAllListeners(channel);
+    },
     sendMessage(channel: Channels, args: unknown[]) {
       ipcRenderer.send(channel, args);
     },
@@ -20,7 +28,7 @@ contextBridge.exposeInMainWorld('electron', {
     once(channel: Channels, func: (...args: unknown[]) => void) {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
     },
-    async invoke(channel: Channels, args: any[]) {
+    async invoke(channel: Channels, args: unknown[]) {
       const result = await ipcRenderer.invoke(channel, args);
       return result;
     },
