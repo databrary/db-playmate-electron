@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Accordion, Button, Form, ListGroup } from 'react-bootstrap';
+import { Accordion, Button, Form, ListGroup, Badge } from 'react-bootstrap';
 import { Asset as AssetType, Participant } from '../../types';
 import AccordionHeader from './AccordionHeader';
 import Asset from './Asset';
@@ -20,6 +20,7 @@ const Session = ({
   const [checkAll, setCheckAll] = useState(false);
   const [assetMap, setAssetMap] = useState<Record<number, AssetType>>();
   const [assetCount, setAssetCount] = useState(0);
+  const [isError, setIsError] = useState(false);
 
   const onCheckAllClick = (e: any) => {
     setCheckAll(e.target.checked);
@@ -67,9 +68,14 @@ const Session = ({
     );
   };
 
+  const checkIfErrorInAssets = (assetList: AssetType[]) => {
+    return assetList.some((asset) => !asset.assetName);
+  };
+
   useEffect(() => {
     if (!assetList) return;
     setAssetCount(assetList.length);
+    setIsError(checkIfErrorInAssets(assetList));
     setAssetMap(buildAssetMap(assetList));
   }, [assetList]);
 
@@ -84,10 +90,13 @@ const Session = ({
   return (
     <Accordion.Item eventKey={eventKey}>
       <Accordion.Header>
-        <AccordionHeader
-          label={getSessionLabel(sessionId, participantList)}
-          badgeValue={assetCount}
-        />
+        <AccordionHeader label={getSessionLabel(sessionId, participantList)}>
+          <div className="me-4">
+            <Badge className={isError ? 'bg-danger' : ''} bg="primary" pill>
+              {assetCount}
+            </Badge>
+          </div>
+        </AccordionHeader>
       </Accordion.Header>
       <Accordion.Body>
         <ListGroup variant="flush">

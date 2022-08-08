@@ -94,7 +94,7 @@ ipcMain.handle('downloadAssets', async (event, args: Asset[]) => {
   for (const asset of args) {
     const localFilePath = path.resolve(
       result.filePaths[0],
-      `${asset.assetName}.mp4`
+      `${asset.assetName || asset.assetId}.mp4`
     );
 
     promiseList.push(

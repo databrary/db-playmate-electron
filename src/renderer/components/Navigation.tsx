@@ -16,7 +16,6 @@ const Navigation = () => {
         </Navbar.Brand>
         <Nav className="me-auto">
           <Nav.Link href="/">Dashboard</Nav.Link>
-          <Nav.Link href="/config">Config</Nav.Link>
         </Nav>
       </Container>
     </Navbar>

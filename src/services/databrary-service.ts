@@ -99,7 +99,10 @@ export const downloadAssetPromise = async (
         return null;
       })
       .catch((error) => {
-        console.log(`Error while downloading asset ${asset.assetName}`, error);
+        console.log(
+          `Error while downloading asset ${asset.assetName}`,
+          error.message
+        );
         // onAssetDowmloadError(asset.assetId, error);
         reject();
       });

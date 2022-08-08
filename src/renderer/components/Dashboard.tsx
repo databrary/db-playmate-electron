@@ -4,7 +4,7 @@ import Volume from './Volume';
 import volumes from '../../volumes.json';
 
 const Dashboard = () => {
-  const [volumeList, setVolumeList] = useState<string[]>();
+  const [volumeList, setVolumeList] = useState<string[]>([]);
 
   useEffect(() => {
     setVolumeList(volumes);

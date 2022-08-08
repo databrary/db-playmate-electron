@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Form, ListGroup, Button } from 'react-bootstrap';
+import { Form, ListGroup, Button, Badge } from 'react-bootstrap';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import { Asset as AssetType } from '../../types';
 
@@ -10,11 +10,13 @@ type Props = {
 
 const Asset = ({ asset: assetProp, checked = false }: Props) => {
   const [asset, setAsset] = useState<AssetType>({} as AssetType);
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
     if (!assetProp) return;
 
     setAsset(assetProp);
+    setIsError(!assetProp.assetName);
   }, [assetProp]);
 
   const handleAssetDownloadEvents = (...args: unknown[]) => {
@@ -52,7 +54,18 @@ const Asset = ({ asset: assetProp, checked = false }: Props) => {
         className="mx-2"
         aria-label="option 1"
       />
-      <span>{asset.assetName}</span>
+      <div className={isError ? '' : ' '}>
+        {asset.assetName || asset.assetId}
+        {isError && (
+          <Badge
+            bg="light"
+            text="dark"
+            className="ms-2 bi bi-info-circle bg-transparent"
+          >
+            <span className="ms-1 text-danger">Asset Name is missing</span>
+          </Badge>
+        )}
+      </div>
       <div className="d-flex ms-auto" style={{ width: '25px', height: '25px' }}>
         {asset.percentage ? (
           <CircularProgressbar
