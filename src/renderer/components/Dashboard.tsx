@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Accordion, Spinner } from 'react-bootstrap';
 import Volume from './Volume';
+import volumes from '../../volumes.json';
 
 const Dashboard = () => {
-  const [volumeList, setVolumeList] = useState(['899']);
+  const [volumeList, setVolumeList] = useState<string[]>();
+
+  useEffect(() => {
+    setVolumeList(volumes);
+  }, []);
 
   // if (isFetching) return <Spinner animation="border" />;
 

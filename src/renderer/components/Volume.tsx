@@ -1,5 +1,5 @@
 import { CSSProperties, useEffect, useState } from 'react';
-import { Accordion, Spinner } from 'react-bootstrap';
+import { Accordion, Spinner, Badge } from 'react-bootstrap';
 import { IVolumeInfo, IRecord } from '../../interfaces';
 import { Asset, Participant } from '../../types';
 import AccordionHeader from './AccordionHeader';
@@ -22,6 +22,8 @@ const Volume = ({
   const [assetList, setAssetList] = useState<Asset[]>([]);
   const [participantList, setParticipantList] = useState<Participant[]>([]);
   const [volumeInfo, setVolumeInfo] = useState<IVolumeInfo>({} as IVolumeInfo);
+  const [isError, setIsError] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
   const getAssetsBySession = (assetList: Asset[]): Record<number, Asset[]> => {
     if (!assetList) return {};
@@ -87,10 +89,13 @@ const Volume = ({
 
   useEffect(() => {
     if (!volumeId) return;
+    setIsFetching(true);
+    // eslint-disable-next-line promise/catch-or-return
     window.electron.ipcRenderer
       .invoke<IVolumeInfo>('volumeInfo', [volumeId])
       .then((data) => setVolumeInfo(data))
-      .catch((error) => console.log('ERROR', error));
+      .catch((_) => setIsError(true))
+      .finally(() => setIsFetching(false));
   }, [volumeId]);
 
   useEffect(() => {
@@ -124,37 +129,46 @@ const Volume = ({
   const getVolumeLabel = () => {
     return `Volume ${volumeId} ${volumeName ? `- ${volumeName}` : ``}`;
   };
-  // TODO: ADD SPINNER
-  // if (isGetAssetsFetching || isVolumeInfoFetching)
-  //   return <Spinner animation="border" />;
 
   return (
     <Accordion.Item eventKey={eventkey} className={className} style={style}>
       <Accordion.Header>
-        <AccordionHeader
-          label={getVolumeLabel()}
-          badgeValue={(Object.keys(sessionsMap) || []).length}
-        />
+        <AccordionHeader label={getVolumeLabel()}>
+          <div className="me-4">
+            {isFetching ? (
+              <Spinner animation="border" size="sm" />
+            ) : (
+              <Badge
+                className={isError ? 'bi bi-bug-fill bg-danger' : ''}
+                bg="primary"
+                pill
+              >
+                {!isError ? (Object.keys(sessionsMap) || []).length : ' '}
+              </Badge>
+            )}
+          </div>
+        </AccordionHeader>
       </Accordion.Header>
-      <Accordion.Body>
-        <Accordion defaultActiveKey="0">
-          {(Object.keys(sessionsMap) || []).map((sessionId, idx) => {
-            const assetList = sessionsMap[sessionId];
-            return (
-              <Session
-                key={sessionId}
-                sessionId={sessionId}
-                assetList={assetList}
-                participantList={getSessionParticipant(
-                  sessionId,
-                  participantList
-                )}
-                eventKey={`${idx}`}
-              />
-            );
-          })}
-        </Accordion>
-      </Accordion.Body>
+      {!isError && (Object.keys(sessionsMap) || []).length > 0 && (
+        <Accordion.Body>
+          <Accordion defaultActiveKey="0">
+            {(Object.keys(sessionsMap) || []).map((sessionId, idx) => {
+              return (
+                <Session
+                  key={sessionId}
+                  sessionId={sessionId}
+                  assetList={sessionsMap[sessionId]}
+                  participantList={getSessionParticipant(
+                    sessionId,
+                    participantList
+                  )}
+                  eventKey={`${idx}`}
+                />
+              );
+            })}
+          </Accordion>
+        </Accordion.Body>
+      )}
     </Accordion.Item>
   );
 };

@@ -1,5 +1,4 @@
 import { Channels } from 'main/preload';
-import { IVolumeInfo } from '../interfaces';
 
 declare global {
   interface Window {

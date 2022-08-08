@@ -116,8 +116,16 @@ ipcMain.handle('downloadAssets', async (event, args: Asset[]) => {
 
 ipcMain.handle('volumeInfo', async (event, args) => {
   if (!getCookies()) throw Error('You must be logged into Databrary');
-  const volumeInfo = await getVolumeInfo(args[0]);
-  return volumeInfo;
+
+  const volumeId = args[0];
+  if (!volumeId) throw Error('You need a valid volume id');
+
+  try {
+    const volumeInfo = await getVolumeInfo(volumeId);
+    return volumeInfo;
+  } catch (error) {
+    throw Error(`Volume ${volumeId} - ${error.message}`);
+  }
 });
 
 export const createAppWindow = async () => {
