@@ -6,7 +6,8 @@ export type Channels =
   | 'volumeInfo'
   | 'downloadAssets'
   | 'assetDownloadStarted'
-  | 'assetDownloadProgress';
+  | 'assetDownloadProgress'
+  | 'databraryLogin';
 contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
     removeListener(channel: Channels, listener: (...args: any[]) => void) {

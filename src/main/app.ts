@@ -19,6 +19,7 @@ import {
   getCookies,
   getVolumeInfo,
   downloadAssetPromise,
+  login,
 } from '../services/databrary-service';
 
 export default class AppUpdater {
@@ -86,14 +87,16 @@ ipcMain.handle('downloadAssets', async (event, args: Asset[]) => {
   if (!getCookies() || !appWindow)
     throw Error('You must be logged into Databrary');
 
-  const result = await dialog.showOpenDialog(appWindow, {
+  const { filePaths, canceled } = await dialog.showOpenDialog(appWindow, {
     properties: ['openDirectory'],
   });
+
+  if (canceled || !filePaths.length) return;
 
   const promiseList = [];
   for (const asset of args) {
     const localFilePath = path.resolve(
-      result.filePaths[0],
+      filePaths[0],
       `${asset.assetName || asset.assetId}.mp4`
     );
 
@@ -128,6 +131,18 @@ ipcMain.handle('volumeInfo', async (event, args) => {
   }
 });
 
+ipcMain.handle('databraryLogin', async (event, args) => {
+  const { email, password } = args[0];
+  try {
+    await login(email, password);
+
+    if (appWindow) appWindow.loadURL(resolveHtmlPath('/'));
+    return;
+  } catch (error) {
+    throw Error(`Cannot login to Databrary - ${error.message}`);
+  }
+});
+
 export const createAppWindow = async () => {
   if (isDebug) {
     await installExtensions();
@@ -154,7 +169,8 @@ export const createAppWindow = async () => {
     },
   });
 
-  appWindow.loadURL(resolveHtmlPath('index.html'));
+  appWindow.loadURL(resolveHtmlPath('/databrary'));
+  // appWindow.loadURL(`http://localhost:1212/databrary`);
 
   appWindow.on('ready-to-show', () => {
     if (!appWindow) {
