@@ -19,6 +19,10 @@ const getCsverf = () => {
   return !!axiosInstance.defaults.headers.common['x-csverf'];
 };
 
+const isLoggedIn = () => {
+  return getCookies() && getCsverf();
+};
+
 const login = async (email: string, password: string, superuser = false) => {
   const response = await axiosInstance.post('/user/login', {
     email,
@@ -134,4 +138,4 @@ const getVolumeInfo = async (volumeId: string): Promise<unknown> => {
   return response.data;
 };
 
-export { login, getVolumeInfo, getCookies, downloadAsset };
+export { login, getVolumeInfo, getCookies, downloadAsset, isLoggedIn };

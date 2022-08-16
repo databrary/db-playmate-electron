@@ -26,28 +26,6 @@ const Session = ({
     setCheckAll(e.target.checked);
   };
 
-  const handleAssetDownloadEvents = (...args: unknown[]) => {
-    if (!args) return;
-    console.log('ARGS', args);
-
-    const newAsset = (args as any[])[0];
-    if (!newAsset) return;
-
-    setAssetMap({
-      ...assetMap,
-      [newAsset.assetid]: { ...newAsset },
-    });
-  };
-
-  const handleAssetDownloadDoneEvent = (...args: unknown[]) => {
-    window.electron.ipcRenderer.removeListener(
-      'assetDownloadStarted',
-      handleAssetDownloadEvents
-    );
-    window.electron.ipcRenderer.removeAllListeners('assetDownloadProgress');
-    window.electron.ipcRenderer.removeAllListeners('assetDownloadProgress');
-  };
-
   const getSessionLabel = (
     sessionId: string,
     participantList: Participant[]
@@ -78,14 +56,6 @@ const Session = ({
     setIsError(checkIfErrorInAssets(assetList));
     setAssetMap(buildAssetMap(assetList));
   }, [assetList]);
-
-  useEffect(() => {
-    // Cleanup
-    // eslint-disable-next-line consistent-return
-    // return () => {
-    // };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <Accordion.Item eventKey={eventKey}>

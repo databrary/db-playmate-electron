@@ -1,7 +1,8 @@
 import { Container, Nav, Navbar } from 'react-bootstrap';
+import { withRouter } from 'renderer/withRouter';
 import icon from '../../../assets/PLAY-logo.png';
 
-const Navigation = () => {
+const Navigation = ({ navigate }) => {
   return (
     <Navbar bg="primary">
       <Container>
@@ -15,11 +16,11 @@ const Navigation = () => {
           />
         </Navbar.Brand>
         <Nav className="me-auto">
-          <Nav.Link href="/">Dashboard</Nav.Link>
+          <Nav.Link onClick={() => navigate('/')}>Dashboard</Nav.Link>
         </Nav>
       </Container>
     </Navbar>
   );
 };
 
-export default Navigation;
+export default withRouter(Navigation);

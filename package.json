@@ -46,8 +46,8 @@
     ]
   },
   "build": {
-    "productName": "ElectronReact",
-    "appId": "org.erb.ElectronReact",
+    "productName": "Playmate Databrary",
+    "appId": "nyu.databrary.playmate",
     "asar": true,
     "asarUnpack": "**\\*.{node,dll}",
     "files": [
@@ -189,6 +189,7 @@
     "@types/webpack-env": "^1.16.3",
     "@typescript-eslint/eslint-plugin": "^5.18.0",
     "@typescript-eslint/parser": "^5.18.0",
+    "bootstrap-icons": "^1.9.1",
     "browserslist-config-erb": "^0.0.3",
     "chalk": "^4.1.2",
     "concurrently": "^7.1.0",
@@ -244,10 +245,8 @@
     "webpack-merge": "^5.8.0"
   },
   "dependencies": {
-    "@types/keytar": "^4.4.2",
     "axios": "^0.27.2",
     "bootstrap": "^5.2.0",
-    "bootstrap-icons": "^1.9.1",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.6",
     "electron-updater": "^4.6.5",

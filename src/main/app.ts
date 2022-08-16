@@ -20,6 +20,7 @@ import {
   getVolumeInfo,
   downloadAssetPromise,
   login,
+  isLoggedIn,
 } from '../services/databrary-service';
 
 export default class AppUpdater {
@@ -143,6 +144,10 @@ ipcMain.handle('databraryLogin', async (event, args) => {
   }
 });
 
+ipcMain.handle('isDatabraryConnected', async (event, args) => {
+  return isLoggedIn();
+});
+
 export const createAppWindow = async () => {
   if (isDebug) {
     await installExtensions();
@@ -169,8 +174,7 @@ export const createAppWindow = async () => {
     },
   });
 
-  appWindow.loadURL(resolveHtmlPath('/databrary'));
-  // appWindow.loadURL(`http://localhost:1212/databrary`);
+  appWindow.loadURL(resolveHtmlPath('index.html'));
 
   appWindow.on('ready-to-show', () => {
     if (!appWindow) {

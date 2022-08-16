@@ -11,6 +11,7 @@ type Props = {
 const Asset = ({ asset: assetProp, checked = false }: Props) => {
   const [asset, setAsset] = useState<AssetType>({} as AssetType);
   const [isError, setIsError] = useState(false);
+  const [isDownloadDone, setIsDownloadDone] = useState(false);
 
   useEffect(() => {
     if (!assetProp) return;
@@ -29,6 +30,11 @@ const Asset = ({ asset: assetProp, checked = false }: Props) => {
     setAsset(newAsset);
   };
 
+  const handleAssetDownloadDoneEvent = (...args: unknown[]) => {
+    handleAssetDownloadEvents(args);
+    setIsDownloadDone(true);
+  };
+
   const onClick = () => {
     window.electron.ipcRenderer.on(
       'assetDownloadStarted',
@@ -40,7 +46,7 @@ const Asset = ({ asset: assetProp, checked = false }: Props) => {
     );
     window.electron.ipcRenderer.on(
       'assetDownloadDone',
-      handleAssetDownloadEvents
+      handleAssetDownloadDoneEvent
     );
 
     window.electron.ipcRenderer.invoke('downloadAssets', [asset]);
@@ -66,8 +72,20 @@ const Asset = ({ asset: assetProp, checked = false }: Props) => {
           </Badge>
         )}
       </div>
-      <div className="d-flex ms-auto" style={{ width: '25px', height: '25px' }}>
-        {asset.percentage ? (
+      <div
+        className="d-flex ms-auto justify-content-end align-items-center"
+        style={{ width: '25px', height: '25px' }}
+      >
+        {isDownloadDone && (
+          <Badge
+            bg="success"
+            className="bi bi-check-circle bg-transparent"
+            text="dark"
+          >
+            {'  '}
+          </Badge>
+        )}
+        {asset.percentage && !isDownloadDone && (
           <CircularProgressbar
             value={asset.percentage}
             strokeWidth={15}
@@ -75,7 +93,8 @@ const Asset = ({ asset: assetProp, checked = false }: Props) => {
               strokeLinecap: 'butt',
             })}
           />
-        ) : (
+        )}
+        {!asset.percentage && !isDownloadDone && (
           <Button
             size="sm"
             variant="light"

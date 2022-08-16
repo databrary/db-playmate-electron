@@ -1,19 +1,13 @@
-import { Routes, Route, BrowserRouter } from 'react-router-dom';
-import { Container } from 'react-bootstrap';
-import Navigation from './components/Navigation';
-import Dashboard from './components/Dashboard';
-import Databrary from './components/Databrary';
+import { MemoryRouter as Router } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import MainPage from './MainPage';
 
-export default function App() {
+const App = () => {
   return (
-    <BrowserRouter>
-      <Navigation />
-      <Container className="my-4">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/databrary" element={<Databrary />} />
-        </Routes>
-      </Container>
-    </BrowserRouter>
+    <Router initialEntries={['/', 'databrary']}>
+      <MainPage />
+    </Router>
   );
-}
+};
+
+export default App;

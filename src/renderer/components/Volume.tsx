@@ -1,6 +1,6 @@
 import { CSSProperties, useEffect, useState } from 'react';
 import { Accordion, Spinner, Badge } from 'react-bootstrap';
-import { IVolumeInfo, IRecord } from '../../interfaces';
+import { IVolumeInfo, IRecord, IContainer } from '../../interfaces';
 import { Asset, Participant } from '../../types';
 import AccordionHeader from './AccordionHeader';
 import Session from './Session';
@@ -67,9 +67,11 @@ const Volume = ({
     sessionId: string,
     participantList: Participant[]
   ) => {
-    const containerRecordList =
-      volumeInfo.containers.find((container: any) => container.id === sessionId)
-        ?.records || [];
+    const containerRecordList = volumeInfo.containers
+      .filter(
+        (container: IContainer) => container.id === parseInt(sessionId, 10)
+      )
+      .flatMap((container) => container.records);
 
     const result: Participant[] = [];
 
