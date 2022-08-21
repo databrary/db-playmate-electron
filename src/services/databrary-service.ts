@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { createWriteStream } from 'fs';
 import { Asset } from 'types';
+import { Channels } from '../constants';
 
 const BASE_API_URL = 'https://nyu.databrary.org/api';
 const BASE_URL = 'https://nyu.databrary.org';
@@ -52,10 +53,10 @@ const downloadAsset = async (assetId: string | number) => {
 export const downloadAssetPromise = async (
   asset: Asset,
   filePath: string,
-  onStart: (newAsset: Asset) => void,
-  onProgress: (newAsset: Asset) => void,
-  onEnd: (newAsset: Asset) => void,
-  onError: (newAsset: Asset, error: unknown) => void
+  onStarted: <T>(channel: Channels, newAsset: T) => void,
+  onProgress: <T>(channel: Channels, newAsset: T) => void,
+  onDone: <T>(channel: Channels, newAsset: T) => void,
+  onError: <T>(channel: Channels, newAsset: T, error: unknown) => void
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
     const stream = createWriteStream(filePath, {
@@ -69,7 +70,7 @@ export const downloadAssetPromise = async (
 
     downloadAsset(newAsset.assetId)
       .then((response) => {
-        onStart(newAsset);
+        onStarted<Asset>('assetDownloadStarted', newAsset);
 
         const writer = response.data.pipe(stream);
         const totalSize = response.headers['content-length'];
@@ -84,11 +85,11 @@ export const downloadAssetPromise = async (
             percentage: Math.floor((downloaded / parseFloat(totalSize)) * 100),
           };
 
-          onProgress(newAsset);
+          onProgress<Asset>('assetDownloadProgress', newAsset);
         });
 
         response.data.on('end', () => {
-          console.log(`Download Asset ${asset} eneded`);
+          console.log(`Download Asset ${asset.assetName} ended`);
         });
 
         writer.on('finish', () => {
@@ -96,7 +97,7 @@ export const downloadAssetPromise = async (
             ...newAsset,
             percentage: 100,
           };
-          onEnd(newAsset);
+          onDone<Asset>('assetDownloadDone', newAsset);
           resolve();
         });
 
@@ -107,7 +108,7 @@ export const downloadAssetPromise = async (
           `Error while downloading asset ${asset.assetName}`,
           error.message
         );
-        // onAssetDowmloadError(asset.assetId, error);
+        // onError<Asset>(asset.assetId, error);
         reject();
       });
   });

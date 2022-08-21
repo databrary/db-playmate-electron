@@ -1,9 +1,11 @@
 import { createRoot } from 'react-dom/client';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap-icons/font/bootstrap-icons.css';
-import 'react-circular-progressbar/dist/styles.css';
+import { MemoryRouter as Router } from 'react-router-dom';
 import App from './App';
 
 const container = document.getElementById('root')!;
 const root = createRoot(container);
-root.render(<App />);
+root.render(
+  <Router initialEntries={['/', 'databrary']}>
+    <App />
+  </Router>
+);

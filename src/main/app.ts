@@ -9,9 +9,17 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  dialog,
+  OpenDialogOptions,
+} from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
+import { statSync } from 'fs';
 import { Asset } from 'types';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
@@ -22,6 +30,13 @@ import {
   login,
   isLoggedIn,
 } from '../services/databrary-service';
+import {
+  downloadFilePromise,
+  uploadChunkFile,
+  uploadFile,
+} from '../services/box-service';
+import { insertCell } from '../services/datavyu-service';
+import { BOX_MAP, Channels } from '../constants';
 
 export default class AppUpdater {
   constructor() {
@@ -58,64 +73,168 @@ const installExtensions = async () => {
     .catch(console.log);
 };
 
-const onAssetDownloadStarted = (asset: Asset) => {
-  if (!appWindow) return;
+const showOpenDialog = async (
+  options: OpenDialogOptions = { properties: ['openDirectory'] }
+): Promise<string[]> => {
+  if (!appWindow) throw new Error('App Window is not Defined');
 
-  appWindow.webContents.send('assetDownloadStarted', asset);
+  const { filePaths, canceled } = await dialog.showOpenDialog(
+    appWindow,
+    options
+  );
+
+  if (canceled || !filePaths.length) throw new Error('Invalid File Path');
+
+  return filePaths;
 };
 
-const onAssetDownloadProgress = (asset: Asset) => {
+const onStarted = <T>(channel: Channels, payload: T) => {
   if (!appWindow) return;
 
-  appWindow.webContents.send('assetDownloadProgress', asset);
+  appWindow.webContents.send(channel, payload);
 };
 
-const onAssetDowmloadDone = (asset: Asset) => {
+const onProgress = <T>(channel: Channels, payload: T) => {
   if (!appWindow) return;
 
-  appWindow.webContents.send('assetDownloadDone', asset);
+  appWindow.webContents.send(channel, payload);
 };
 
-const onAssetDowmloadError = (asset: Asset, error: unknown) => {
+const onDone = <T>(channel: Channels, payload: T) => {
   if (!appWindow) return;
 
-  appWindow.webContents.send('assetDownloadError', {
+  appWindow.webContents.send(channel, payload);
+};
+
+const onError = <T>(channel: Channels, payload: T, error: unknown) => {
+  if (!appWindow) return;
+
+  appWindow.webContents.send(channel, {
     error,
   });
 };
 
-ipcMain.handle('downloadAssets', async (event, args: Asset[]) => {
-  if (!getCookies() || !appWindow)
-    throw Error('You must be logged into Databrary');
+ipcMain.handle('uploadFiles', async (event, args: any[]) => {
+  try {
+    const filePaths = await showOpenDialog({
+      properties: ['openFile'],
+    });
 
-  const { filePaths, canceled } = await dialog.showOpenDialog(appWindow, {
-    properties: ['openDirectory'],
-  });
-
-  if (canceled || !filePaths.length) return;
-
-  const promiseList = [];
-  for (const asset of args) {
-    const localFilePath = path.resolve(
-      filePaths[0],
-      `${asset.assetName || asset.assetId}.mp4`
-    );
-
-    promiseList.push(
-      downloadAssetPromise(
-        asset,
-        localFilePath,
-        onAssetDownloadStarted,
-        onAssetDownloadProgress,
-        onAssetDowmloadDone,
-        onAssetDowmloadError
-      )
-    );
+    for (const folderId of args) {
+      uploadFile(folderId, filePaths[0], path.basename(filePaths[0])).then(
+        (_) => console.log('File Uploaded')
+      );
+    }
+  } catch (error) {
+    console.log('Error while upload file to box', (error as any).message);
   }
+});
 
-  Promise.all(promiseList).catch((error) => {
-    console.error('An error occured while download Assets', error);
-  });
+ipcMain.handle('uploadVideo', async (event, args: any[]) => {
+  try {
+    const filePaths = await showOpenDialog({
+      properties: ['openFile'],
+      filters: [
+        {
+          name: 'Videos',
+          extensions: ['mp4'],
+        },
+      ],
+    });
+
+    const fileSize = statSync(filePaths[0]).size;
+
+    const uploader = await uploadChunkFile(
+      BOX_MAP.UPLOAD_PASSED_VIDEO,
+      fileSize,
+      filePaths[0],
+      `${args[0]}.mp4`
+    );
+    uploader.on('uploadComplete', (_) =>
+      onDone<number>('uploadVideoDone', 100)
+    );
+
+    let uploaded = 0;
+    uploader.on('chunkUploaded', (chunk) => {
+      uploaded += chunk.part.size;
+      onProgress(
+        'uploadVideoProgress',
+        Math.floor((uploaded / fileSize) * 100)
+      );
+    });
+    onStarted('uploadVideoStarted', 0);
+    await uploader.start();
+  } catch (error) {
+    console.log('Error while upload video to box', (error as any).message);
+  }
+});
+
+ipcMain.handle('downloadFiles', async (event, args: any[]) => {
+  try {
+    const filePaths = await showOpenDialog();
+
+    const promiseList: Promise<void>[] = [];
+    for (const template of args) {
+      const localFilePath = path.resolve(
+        filePaths[0],
+        `${template.fileName}.opf`
+      );
+      promiseList.push(
+        downloadFilePromise(BOX_MAP.QA_DATAVYU_TEMPLATE, localFilePath).then(
+          () => {
+            const cellCodes = [
+              `PLAY_${template.id}`,
+              new Date(template.birthdate).toLocaleDateString('en-US'),
+              new Date(template.date).toLocaleDateString('en-US'),
+              template.language.charAt(0).toLowerCase(),
+              '.',
+            ];
+
+            insertCell(localFilePath, 'PLAY_ID', cellCodes);
+          }
+        )
+      );
+    }
+
+    Promise.all(promiseList).catch((error) => {
+      console.error('An error occured while downloading Files', error);
+    });
+  } catch (error) {
+    console.log('Error while downloading box file', error);
+  }
+});
+
+ipcMain.handle('downloadAssets', async (event, args: Asset[]) => {
+  if (!getCookies()) throw Error('You must be logged into Databrary');
+
+  try {
+    const filePaths = await showOpenDialog();
+
+    const promiseList: Promise<void>[] = [];
+    for (const asset of args) {
+      const localFilePath = path.resolve(
+        filePaths[0],
+        `${asset.assetName || asset.assetId}.mp4`
+      );
+
+      promiseList.push(
+        downloadAssetPromise(
+          asset,
+          localFilePath,
+          onStarted,
+          onProgress,
+          onDone,
+          onError
+        )
+      );
+    }
+
+    Promise.all(promiseList).catch((error) => {
+      console.error('An error occured while download Assets', error);
+    });
+  } catch (error) {
+    console.log('Error while downloading databrary Asset', error);
+  }
 });
 
 ipcMain.handle('volumeInfo', async (event, args) => {
@@ -128,7 +247,7 @@ ipcMain.handle('volumeInfo', async (event, args) => {
     const volumeInfo = await getVolumeInfo(volumeId);
     return volumeInfo;
   } catch (error) {
-    throw Error(`Volume ${volumeId} - ${error.message}`);
+    throw Error(`Volume ${volumeId} - ${(error as any).message}`);
   }
 });
 
@@ -136,11 +255,10 @@ ipcMain.handle('databraryLogin', async (event, args) => {
   const { email, password } = args[0];
   try {
     await login(email, password);
-
-    if (appWindow) appWindow.loadURL(resolveHtmlPath('/'));
+    // if (appWindow) appWindow.loadURL(resolveHtmlPath('index.html'));
     return;
   } catch (error) {
-    throw Error(`Cannot login to Databrary - ${error.message}`);
+    throw Error(`Cannot login to Databrary - ${(error as any).message}`);
   }
 });
 

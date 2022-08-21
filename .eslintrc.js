@@ -11,6 +11,10 @@ module.exports = {
     'react/require-default-props': 'off',
     'no-restricted-syntax': 'off',
     'no-continue': 'off',
+    'promise/always-return': 'off',
+    'promise/catch-or-return': 'off',
+    'react/jsx-props-no-spreading': 'off',
+    'react/destructuring-assignment': 'off',
   },
   parserOptions: {
     ecmaVersion: 2020,

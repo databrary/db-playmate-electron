@@ -1,14 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { Channels } from '../constants';
 
-export type Channels =
-  | 'ipc-example'
-  | 'databrary'
-  | 'volumeInfo'
-  | 'downloadAssets'
-  | 'assetDownloadStarted'
-  | 'assetDownloadProgress'
-  | 'databraryLogin'
-  | 'isDatabraryConnected';
 contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
     removeListener(channel: Channels, listener: (...args: any[]) => void) {

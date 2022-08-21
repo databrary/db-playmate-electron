@@ -1,4 +1,4 @@
-import { Channels } from 'main/preload';
+import { Channels } from '../constants';
 
 declare global {
   interface Window {
@@ -11,10 +11,10 @@ declare global {
         removeAllListeners(channel: Channels): void;
         sendMessage(channel: Channels, args: unknown[]): void;
         on(
-          channel: string,
+          channel: Channels,
           func: (...args: unknown[]) => void
         ): (() => void) | undefined;
-        once(channel: string, func: (...args: unknown[]) => void): void;
+        once(channel: Channels, func: (...args: unknown[]) => void): void;
         invoke<T>(channel: Channels, args: unknown[]): Promise<T>;
       };
     };
