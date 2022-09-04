@@ -15,6 +15,7 @@ import {
 
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
 import MenuIcon from '@mui/icons-material/Menu';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { NavigateFunction } from 'react-router-dom';
 import { withRouter } from 'renderer/withRouter';
@@ -27,6 +28,7 @@ type Props = {
   open: boolean;
   onVolumeClick: (volume: string) => void;
   onDrawerClick: (open: boolean) => void;
+  onRefresh: () => void;
   volumeList?: string[];
 };
 
@@ -56,6 +58,7 @@ const Navigation = ({
   open,
   onVolumeClick,
   onDrawerClick,
+  onRefresh,
   volumeList = [],
 }: Props) => {
   const onClick = (volume) => {
@@ -87,6 +90,15 @@ const Navigation = ({
           <Typography variant="h6" noWrap component="div">
             Play Project
           </Typography>
+          <IconButton
+            color="inherit"
+            aria-label="refresh"
+            onClick={onRefresh}
+            edge="end"
+            sx={{ ml: 'auto', ...(open && { display: 'none' }) }}
+          >
+            <RefreshIcon />
+          </IconButton>
         </Toolbar>
       </AppBar>
       <Drawer

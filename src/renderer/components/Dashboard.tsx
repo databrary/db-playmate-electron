@@ -42,15 +42,11 @@ const Dashboard = () => {
     setStatus(args[0] as string);
   };
 
-  useEffect(() => {
-    setVolumeList(volumes);
-  }, []);
-
-  useEffect(() => {
+  const loadData = (volumeList) => {
     setIsFetching(true);
     window.electron.ipcRenderer.on('status', handleEvent);
     window.electron.ipcRenderer
-      .invoke<Play>('loadData', volumes || [])
+      .invoke<Play>('loadData', volumeList)
       .then(({ databrary: { volumes }, box: { videos, passed, failed } }) => {
         dispatch(addVolumes(volumes || {}));
         dispatch(addVideos(videos || []));
@@ -58,7 +54,18 @@ const Dashboard = () => {
         dispatch(addFailed(failed || []));
       })
       .catch((error) => console.log(error))
-      .finally(() => setIsFetching(false));
+      .finally(() => {
+        setStatus('');
+        setIsFetching(false);
+      });
+  };
+
+  useEffect(() => {
+    setVolumeList(volumes);
+  }, []);
+
+  useEffect(() => {
+    loadData(volumeList || []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [volumeList]);
 
@@ -90,6 +97,7 @@ const Dashboard = () => {
           open={drawerOpen}
           onVolumeClick={onVolumeClick}
           onDrawerClick={onDrawerClick}
+          onRefresh={loadData}
         />
         <Main open={drawerOpen}>
           <DrawerHeader />
