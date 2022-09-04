@@ -46,7 +46,7 @@ const Session = ({ session, volumeId }: Props) => {
       </AccordionSummary>
       <AccordionDetails>
         <Divider variant="middle" />
-        {status === 'UNKNOWN' && (
+        {status === 'UNKNOWN' && Object.values(assetMap).length > 0 && (
           <>
             <SessionActions volumeId={volumeId} session={session} />
             <Divider variant="middle" />

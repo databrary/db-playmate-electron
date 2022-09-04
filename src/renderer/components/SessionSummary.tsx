@@ -1,4 +1,4 @@
-import { Chip, Typography, Box, Color, Tooltip } from '@mui/material';
+import { Chip, Typography, Box, Tooltip } from '@mui/material';
 import FaceIcon from '@mui/icons-material/Face';
 import { Participant } from '../../types';
 import { QA, TOOLTIP_MESSAGES } from '../../constants';
