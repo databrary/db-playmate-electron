@@ -8,6 +8,7 @@ import { drawerWidth } from '../../constants';
 import DrawerHeader from './DrawerHeader';
 import { useAppDispatch } from '../hooks/store';
 import { addVolumes } from '../slices/databrary';
+import { addVideos, addFailed, addPassed } from '../slices/box';
 import { Play } from '../../types';
 
 const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
@@ -50,7 +51,12 @@ const Dashboard = () => {
     window.electron.ipcRenderer.on('status', handleEvent);
     window.electron.ipcRenderer
       .invoke<Play>('loadData', volumes || [])
-      .then(({ databrary: { volumes } }) => dispatch(addVolumes(volumes || {})))
+      .then(({ databrary: { volumes }, box: { videos, passed, failed } }) => {
+        dispatch(addVolumes(volumes || {}));
+        dispatch(addVideos(videos || []));
+        dispatch(addPassed(passed || []));
+        dispatch(addFailed(failed || []));
+      })
       .catch((error) => console.log(error))
       .finally(() => setIsFetching(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,13 +1,21 @@
-import { Chip, Typography, Box } from '@mui/material';
+import { Chip, Typography, Box, Color, Tooltip } from '@mui/material';
 import FaceIcon from '@mui/icons-material/Face';
 import { Participant } from '../../types';
+import { QA, TOOLTIP_MESSAGES } from '../../constants';
 
 type Props = {
   id: string;
   participants: Participant[];
+  status?: QA;
 };
 
-const SessionSummary = ({ id, participants }: Props) => {
+const SessionSummary = ({ id, participants, status = 'UNKNOWN' }: Props) => {
+  const getStatusColor = (status: QA) => {
+    if (status === 'PASSED') return 'green';
+    if (status === 'FAILED') return 'red';
+    return undefined;
+  };
+
   return (
     <Box
       sx={{
@@ -17,17 +25,44 @@ const SessionSummary = ({ id, participants }: Props) => {
       }}
     >
       <Typography>{id || ''}</Typography>
-      {participants.map((participant) => (
-        <Chip
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          ml: 'auto',
+        }}
+      >
+        <Typography
           sx={{
             mr: 2,
           }}
-          icon={<FaceIcon />}
-          size="small"
-          color="primary"
-          label={participant.id || ''}
-        />
-      ))}
+          color={getStatusColor(status)}
+        >
+          {status !== 'UNKNOWN' ? status : ''}
+        </Typography>
+        {participants.map((participant) => (
+          <Tooltip
+            title={
+              participant.id
+                ? `${TOOLTIP_MESSAGES.DATABRARY_PARTICIPANT} ${participant.id}`
+                : TOOLTIP_MESSAGES.DATABRARY_PARTICIPANT_ERROR
+            }
+            placement="top"
+          >
+            <Chip
+              key={`participant-${participant.id}`}
+              sx={{
+                mr: 2,
+              }}
+              icon={<FaceIcon />}
+              size="small"
+              color={participant.id ? 'primary' : 'error'}
+              label={participant.id || ''}
+            />
+          </Tooltip>
+        ))}
+      </Box>
     </Box>
   );
 };

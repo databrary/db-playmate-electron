@@ -6,7 +6,17 @@ export const BOX_MAP = {
   QA_FAILED: '122812409466',
 };
 
+export const TOOLTIP_MESSAGES = {
+  BOX_VIDEO_ALREADY_UPLOADED:
+    'Video already exists in 1_PLAY_videos_for_coding folder',
+  BOX_VIDEO_UPLOAD: 'Upload Video to BOX',
+  DATABRARY_PARTICIPANT: 'Particpant #',
+  DATABRARY_PARTICIPANT_ERROR: 'Found a participant but cannot retrieve the ID',
+};
+
 export const drawerWidth = 240;
+
+export type QA = 'FAILED' | 'PASSED' | 'UNKNOWN';
 
 export type Channels =
   | 'loadData'

@@ -68,10 +68,31 @@ export type Context = {
   state: string;
 };
 
+export type BoxEntry = {
+  id: number;
+  etag: number;
+  type: string;
+  sequence_id: number;
+  name: string;
+  sha1: string;
+  file_version: {
+    id: number;
+    type: string;
+    sha1: string;
+  };
+};
+
 export type Databrary = {
   volumes: Record<string, Volume | Error>;
 };
 
+export type Box = {
+  videos: BoxEntry[];
+  passed: BoxEntry[];
+  failed: BoxEntry[];
+};
+
 export type Play = {
   databrary: Databrary;
+  box: Box;
 };

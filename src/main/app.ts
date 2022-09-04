@@ -36,6 +36,7 @@ import {
 } from '../services/databrary-service';
 import {
   downloadFilePromise,
+  ls,
   uploadChunkFile,
   uploadFile,
 } from '../services/box-service';
@@ -187,17 +188,16 @@ ipcMain.handle('downloadAssets', async (event, args: Asset[]) => {
   }
 });
 
-const loadVolumes = async (volumes: string[]) => {
+const getVolumes = async (volumes: string[]) => {
   const volumesMap: Record<string, Volume | Error> = {};
   for (const volumeId of volumes) {
     try {
+      onEvent('status', `Fetching Volume ${volumeId} data...`);
       // eslint-disable-next-line no-await-in-loop
       const volumeInfo = await getVolumeInfo(volumeId);
       volumesMap[volumeId] = getVolume(volumeInfo);
-
-      onEvent('status', `Fetched Volume ${volumeId} data...`);
     } catch (error) {
-      console.log('Error', (error as any).message);
+      console.log('getVolumes - Error', (error as any).message);
 
       onEvent('status', `Error while fetching Volume ${volumeId} data...`);
       volumesMap[volumeId] = {
@@ -207,19 +207,56 @@ const loadVolumes = async (volumes: string[]) => {
       };
     }
   }
-  onEvent('status', `Fetched all Databrary Volumes...`);
   return volumesMap;
 };
 
-ipcMain.handle('volumeInfo', async (event, args) => {
-  if (!getCookies()) throw Error('You must be logged into Databrary');
-  return loadVolumes(args);
-});
+const getBoxVideos = async (folderId = BOX_MAP.UPLOAD_PASSED_VIDEO) => {
+  try {
+    onEvent('status', 'Fetching Box Videos...');
+    const entries = await ls(folderId);
+    return entries;
+  } catch (error) {
+    console.log('getBoxVideos - Error', (error as any).message);
+    onEvent('status', 'Error Fetching Box Videos...');
+  }
+
+  return [];
+};
+
+const getQAPassed = async (folderId = BOX_MAP.QA_PASSED) => {
+  try {
+    onEvent('status', 'Fetching Passed QA...');
+    const entries = await ls(folderId);
+    return entries;
+  } catch (error) {
+    console.log('getQAPassed - Error', (error as any).message);
+    onEvent('status', 'Error Fetching Passed QA...');
+  }
+
+  return [];
+};
+
+const getQAFailed = async (folderId = BOX_MAP.QA_FAILED) => {
+  try {
+    onEvent('status', 'Fetching Failed QA...');
+    const entries = await ls(folderId);
+    return entries;
+  } catch (error) {
+    console.log('getQAFailed - Error', (error as any).message);
+    onEvent('status', 'Error Fetching Failed QA...');
+  }
+  return [];
+};
 
 ipcMain.handle('loadData', async (event, args) => {
   if (!getCookies()) throw Error('You must be logged into Databrary');
   return {
-    databrary: { volumes: await loadVolumes(args) },
+    databrary: { volumes: await getVolumes(args) },
+    box: {
+      videos: await getBoxVideos(),
+      passed: await getQAPassed(),
+      failed: await getQAFailed(),
+    },
   };
 });
 

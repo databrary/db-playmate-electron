@@ -145,7 +145,7 @@ const downloadFile = async (fielId: string) => {
   return response;
 };
 
-export const downloadFilePromise = async (
+const downloadFilePromise = async (
   fileId: string,
   filePath: string
 ): Promise<void> => {
@@ -168,6 +168,11 @@ export const downloadFilePromise = async (
   });
 };
 
+const ls = async (folderId: string) => {
+  const items = await client.folders.getItems(folderId);
+  return items.entries || [];
+};
+
 export {
   getAccessToken,
   getAuthenticationURL,
@@ -177,4 +182,6 @@ export {
   refreshTokens,
   uploadChunkFile,
   uploadFile,
+  downloadFilePromise,
+  ls,
 };

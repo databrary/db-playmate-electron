@@ -6,7 +6,10 @@ import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import { Context, Participant, Session as SessionType } from '../../types';
-import { BOX_MAP } from '../../constants';
+import { BOX_MAP, TOOLTIP_MESSAGES } from '../../constants';
+import { useAppSelector } from '../hooks/store';
+import { isVideoInBox } from '../slices/box';
+import { RootState } from '../store/store';
 
 type Props = {
   volumeId: string;
@@ -14,6 +17,9 @@ type Props = {
 };
 
 const SessionActions = ({ session, volumeId }: Props) => {
+  const isVideoLreadyUploaded = useAppSelector((state: RootState) =>
+    isVideoInBox(state, session.id)
+  );
   const [isUploadStarted, setIsUploadStarted] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploadDone, setIsUploadDone] = useState(false);
@@ -23,7 +29,7 @@ const SessionActions = ({ session, volumeId }: Props) => {
   };
 
   const buildDatavyuTemplateName = (volumeId: string, sessionId: string) => {
-    return `PLAY_${volumeId}_${session.id}`;
+    return `PLAY_${volumeId}_${sessionId}`;
   };
 
   const handleUploadStartedEvent = (...args: unknown[]) => {
@@ -95,9 +101,10 @@ const SessionActions = ({ session, volumeId }: Props) => {
       <Tooltip title="Generate OPF Template for this Session" placement="top">
         <IconButton
           aria-label="download-opf"
+          disabled={!volumeId || !session.id}
           onClick={(_) =>
             onDownloadDatavyuTemplate(
-              buildDatavyuTemplateName(volumeId || 'VOL', session.id)
+              buildDatavyuTemplateName(volumeId, session.id)
             )
           }
         >
@@ -117,10 +124,23 @@ const SessionActions = ({ session, volumeId }: Props) => {
         </IconButton>
       )}
       {!isUploadStarted && !isUploadDone && (
-        <Tooltip title="Upload Video to BOX" placement="top">
-          <IconButton aria-label="upload-video" onClick={onUploadVideo}>
-            <UploadIcon />
-          </IconButton>
+        <Tooltip
+          title={
+            isVideoLreadyUploaded
+              ? TOOLTIP_MESSAGES.BOX_VIDEO_ALREADY_UPLOADED
+              : TOOLTIP_MESSAGES.BOX_VIDEO_UPLOAD
+          }
+          placement="top"
+        >
+          <div>
+            <IconButton
+              aria-label="upload-video"
+              onClick={onUploadVideo}
+              disabled={isVideoLreadyUploaded}
+            >
+              <UploadIcon />
+            </IconButton>
+          </div>
         </Tooltip>
       )}
     </Box>

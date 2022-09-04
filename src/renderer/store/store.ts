@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import databraryReducer from '../slices/databrary';
+import boxReducer from '../slices/box';
 
 export const store = configureStore({
   reducer: {
     databrary: databraryReducer,
+    box: boxReducer,
   },
 });
 

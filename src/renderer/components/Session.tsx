@@ -11,6 +11,9 @@ import { Asset as AssetType, Session as SessionType } from '../../types';
 import Asset from './Asset';
 import SessionSummary from './SessionSummary';
 import SessionActions from './SessionActions';
+import { RootState } from '../store/store';
+import { useAppSelector } from '../hooks/store';
+import { getQAStatus } from '../slices/box';
 
 type Props = {
   session: SessionType;
@@ -18,6 +21,10 @@ type Props = {
 };
 
 const Session = ({ session, volumeId }: Props) => {
+  const status = useAppSelector((state: RootState) =>
+    getQAStatus(state, session.id)
+  );
+
   const [assetMap, setAssetMap] = useState<Record<number, AssetType>>({});
 
   useEffect(() => {
@@ -33,14 +40,18 @@ const Session = ({ session, volumeId }: Props) => {
       >
         <SessionSummary
           id={session.id}
+          status={status}
           participants={Object.values(session.participants) || []}
         />
       </AccordionSummary>
       <AccordionDetails>
         <Divider variant="middle" />
-        <SessionActions volumeId={volumeId || 'VOL'} session={session} />
-        <Divider variant="middle" />
-
+        {status === 'UNKNOWN' && (
+          <>
+            <SessionActions volumeId={volumeId} session={session} />
+            <Divider variant="middle" />
+          </>
+        )}
         <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
           {(Object.values(assetMap) || []).map((asset, idx) => (
             <Asset key={idx} asset={asset} />

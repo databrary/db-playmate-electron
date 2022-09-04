@@ -25,7 +25,7 @@ export const getVolume = createSelector(
     (state: RootState) => state.databrary.volumes,
     (state: RootState, volumeId) => volumeId,
   ],
-  (volumes, volumeId) => volumes[volumeId]
+  (volumes, volumeId) => volumes[volumeId] as Volume | Error
 );
 
 export const { addVolumes } = databrarySlice.actions;
