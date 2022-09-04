@@ -36,8 +36,6 @@ function Databrary({ navigate }: Props) {
       .finally(() => setIsFetching(false));
   };
 
-  // if (isFetching) return <Spinner animation="border" />;
-
   return (
     <Box
       sx={{

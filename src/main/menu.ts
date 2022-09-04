@@ -209,7 +209,7 @@ export default class MenuBuilder {
 
     return [
       subMenuAbout,
-      subMenuConfig,
+      // subMenuConfig,
       subMenuEdit,
       subMenuView,
       subMenuWindow,

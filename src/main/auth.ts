@@ -8,6 +8,7 @@ import {
   logout,
 } from '../services/box-service';
 import { createAppWindow } from './app';
+import { installExtensions, isDebugMode } from './util';
 
 let authWindow: BrowserWindow | null = null;
 
@@ -16,25 +17,11 @@ if (process.env.NODE_ENV === 'production') {
   sourceMapSupport.install();
 }
 
-const isDebug =
-  process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
+const isDebug = isDebugMode();
 
 if (isDebug) {
   require('electron-debug')();
 }
-
-const installExtensions = async () => {
-  const installer = require('electron-devtools-installer');
-  const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
-  const extensions = ['REACT_DEVELOPER_TOOLS'];
-
-  return installer
-    .default(
-      extensions.map((name) => installer[name]),
-      forceDownload
-    )
-    .catch(console.log);
-};
 
 const destroyAuthWin = () => {
   if (!authWindow) return;

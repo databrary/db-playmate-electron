@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Box,
+  CircularProgress,
   Divider,
   IconButton,
   ListItem,
@@ -10,7 +11,6 @@ import {
 import ErrorIcon from '@mui/icons-material/Error';
 import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
 import YouTubeIcon from '@mui/icons-material/YouTube';
-import CircularProgressWithLabel from './CircularProgressWithLabel';
 import { Asset as AssetType } from '../../types';
 
 type Props = {
@@ -87,7 +87,8 @@ const Asset = ({ asset: assetProp }: Props) => {
                 </IconButton>
               )}
               {isDownloadStarted && !isDownloadDone && !isDownloadError && (
-                <CircularProgressWithLabel
+                <CircularProgress
+                  variant="determinate"
                   value={asset.percentage}
                   size="small"
                 />

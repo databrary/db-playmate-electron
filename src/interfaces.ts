@@ -39,7 +39,7 @@ export interface IOwner {
   name: string;
 }
 
-export interface IVolumeInfo {
+export interface IVolume {
   access: any[];
   body: string;
   citation: any;

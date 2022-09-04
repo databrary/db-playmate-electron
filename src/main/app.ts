@@ -17,12 +17,16 @@ import {
   dialog,
   OpenDialogOptions,
 } from 'electron';
-import { autoUpdater } from 'electron-updater';
-import log from 'electron-log';
 import { statSync } from 'fs';
-import { Asset } from 'types';
+import { Asset, Error, Volume } from '../types';
 import MenuBuilder from './menu';
-import { resolveHtmlPath } from './util';
+import {
+  AppUpdater,
+  getVolume,
+  installExtensions,
+  isDebugMode,
+  resolveHtmlPath,
+} from './util';
 import {
   getCookies,
   getVolumeInfo,
@@ -38,14 +42,6 @@ import {
 import { insertCell } from '../services/datavyu-service';
 import { BOX_MAP, Channels } from '../constants';
 
-export default class AppUpdater {
-  constructor() {
-    log.transports.file.level = 'info';
-    autoUpdater.logger = log;
-    autoUpdater.checkForUpdatesAndNotify();
-  }
-}
-
 let appWindow: BrowserWindow | null = null;
 
 if (process.env.NODE_ENV === 'production') {
@@ -53,25 +49,11 @@ if (process.env.NODE_ENV === 'production') {
   sourceMapSupport.install();
 }
 
-const isDebug =
-  process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
+const isDebug = isDebugMode();
 
 if (isDebug) {
   require('electron-debug')();
 }
-
-const installExtensions = async () => {
-  const installer = require('electron-devtools-installer');
-  const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
-  const extensions = ['REACT_DEVELOPER_TOOLS'];
-
-  return installer
-    .default(
-      extensions.map((name) => installer[name]),
-      forceDownload
-    )
-    .catch(console.log);
-};
 
 const showOpenDialog = async (
   options: OpenDialogOptions = { properties: ['openDirectory'] }
@@ -88,30 +70,10 @@ const showOpenDialog = async (
   return filePaths;
 };
 
-const onStarted = <T>(channel: Channels, payload: T) => {
+const onEvent = <T>(channel: Channels, payload: T) => {
   if (!appWindow) return;
 
   appWindow.webContents.send(channel, payload);
-};
-
-const onProgress = <T>(channel: Channels, payload: T) => {
-  if (!appWindow) return;
-
-  appWindow.webContents.send(channel, payload);
-};
-
-const onDone = <T>(channel: Channels, payload: T) => {
-  if (!appWindow) return;
-
-  appWindow.webContents.send(channel, payload);
-};
-
-const onError = <T>(channel: Channels, payload: T, error: unknown) => {
-  if (!appWindow) return;
-
-  appWindow.webContents.send(channel, {
-    error,
-  });
 };
 
 ipcMain.handle('uploadFiles', async (event, args: any[]) => {
@@ -151,18 +113,15 @@ ipcMain.handle('uploadVideo', async (event, args: any[]) => {
       `${args[0]}.mp4`
     );
     uploader.on('uploadComplete', (_) =>
-      onDone<number>('uploadVideoDone', 100)
+      onEvent<number>('uploadVideoDone', 100)
     );
 
     let uploaded = 0;
     uploader.on('chunkUploaded', (chunk) => {
       uploaded += chunk.part.size;
-      onProgress(
-        'uploadVideoProgress',
-        Math.floor((uploaded / fileSize) * 100)
-      );
+      onEvent('uploadVideoProgress', Math.floor((uploaded / fileSize) * 100));
     });
-    onStarted('uploadVideoStarted', 0);
+    onEvent('uploadVideoStarted', 0);
     await uploader.start();
   } catch (error) {
     console.log('Error while upload video to box', (error as any).message);
@@ -217,16 +176,7 @@ ipcMain.handle('downloadAssets', async (event, args: Asset[]) => {
         `${asset.assetName || asset.assetId}.mp4`
       );
 
-      promiseList.push(
-        downloadAssetPromise(
-          asset,
-          localFilePath,
-          onStarted,
-          onProgress,
-          onDone,
-          onError
-        )
-      );
+      promiseList.push(downloadAssetPromise(asset, localFilePath, onEvent));
     }
 
     Promise.all(promiseList).catch((error) => {
@@ -237,26 +187,46 @@ ipcMain.handle('downloadAssets', async (event, args: Asset[]) => {
   }
 });
 
+const loadVolumes = async (volumes: string[]) => {
+  const volumesMap: Record<string, Volume | Error> = {};
+  for (const volumeId of volumes) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const volumeInfo = await getVolumeInfo(volumeId);
+      volumesMap[volumeId] = getVolume(volumeInfo);
+
+      onEvent('status', `Fetched Volume ${volumeId} data...`);
+    } catch (error) {
+      console.log('Error', (error as any).message);
+
+      onEvent('status', `Error while fetching Volume ${volumeId} data...`);
+      volumesMap[volumeId] = {
+        id: volumeId,
+        status: `400`,
+        message: `Error while fetching volume ${volumeId}`,
+      };
+    }
+  }
+  onEvent('status', `Fetched all Databrary Volumes...`);
+  return volumesMap;
+};
+
 ipcMain.handle('volumeInfo', async (event, args) => {
   if (!getCookies()) throw Error('You must be logged into Databrary');
+  return loadVolumes(args);
+});
 
-  const volumeId = args[0];
-  if (!volumeId) throw Error('You need a valid volume id');
-
-  try {
-    const volumeInfo = await getVolumeInfo(volumeId);
-    return volumeInfo;
-  } catch (error) {
-    throw Error(`Volume ${volumeId} - ${(error as any).message}`);
-  }
+ipcMain.handle('loadData', async (event, args) => {
+  if (!getCookies()) throw Error('You must be logged into Databrary');
+  return {
+    databrary: { volumes: await loadVolumes(args) },
+  };
 });
 
 ipcMain.handle('databraryLogin', async (event, args) => {
   const { email, password } = args[0];
   try {
     await login(email, password);
-    // if (appWindow) appWindow.loadURL(resolveHtmlPath('index.html'));
-    return;
   } catch (error) {
     throw Error(`Cannot login to Databrary - ${(error as any).message}`);
   }
@@ -266,6 +236,7 @@ ipcMain.handle('isDatabraryConnected', async (event, args) => {
   return isLoggedIn();
 });
 
+// eslint-disable-next-line import/prefer-default-export
 export const createAppWindow = async () => {
   if (isDebug) {
     await installExtensions();

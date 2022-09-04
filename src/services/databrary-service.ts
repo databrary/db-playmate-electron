@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { createWriteStream } from 'fs';
+import { IVolume } from 'interfaces';
 import { Asset } from 'types';
 import { Channels } from '../constants';
 
@@ -53,10 +54,7 @@ const downloadAsset = async (assetId: string | number) => {
 export const downloadAssetPromise = async (
   asset: Asset,
   filePath: string,
-  onStarted: <T>(channel: Channels, newAsset: T) => void,
-  onProgress: <T>(channel: Channels, newAsset: T) => void,
-  onDone: <T>(channel: Channels, newAsset: T) => void,
-  onError: <T>(channel: Channels, newAsset: T, error: unknown) => void
+  onEvent: <T>(channel: Channels, payload: T) => void
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
     const stream = createWriteStream(filePath, {
@@ -70,7 +68,7 @@ export const downloadAssetPromise = async (
 
     downloadAsset(newAsset.assetId)
       .then((response) => {
-        onStarted<Asset>('assetDownloadStarted', newAsset);
+        onEvent<Asset>('assetDownloadStarted', newAsset);
 
         const writer = response.data.pipe(stream);
         const totalSize = response.headers['content-length'];
@@ -85,7 +83,7 @@ export const downloadAssetPromise = async (
             percentage: Math.floor((downloaded / parseFloat(totalSize)) * 100),
           };
 
-          onProgress<Asset>('assetDownloadProgress', newAsset);
+          onEvent<Asset>('assetDownloadProgress', newAsset);
         });
 
         response.data.on('end', () => {
@@ -97,7 +95,7 @@ export const downloadAssetPromise = async (
             ...newAsset,
             percentage: 100,
           };
-          onDone<Asset>('assetDownloadDone', newAsset);
+          onEvent<Asset>('assetDownloadDone', newAsset);
           resolve();
         });
 
@@ -114,7 +112,7 @@ export const downloadAssetPromise = async (
   });
 };
 
-const getVolumeInfo = async (volumeId: string): Promise<unknown> => {
+const getVolumeInfo = async (volumeId: string): Promise<IVolume> => {
   const params = {
     access: '',
     citation: '',

@@ -9,8 +9,9 @@ export const BOX_MAP = {
 export const drawerWidth = 240;
 
 export type Channels =
+  | 'loadData'
+  | 'status'
   | 'databrary'
-  | 'volumeInfo'
   | 'downloadAssets'
   | 'assetDownloadStarted'
   | 'assetDownloadProgress'
