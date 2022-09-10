@@ -17,8 +17,8 @@ import {
   dialog,
   OpenDialogOptions,
 } from 'electron';
-import { statSync } from 'fs';
-import { Asset, Error, Volume } from '../types';
+import { statSync, createWriteStream } from 'fs';
+import { Asset, Error, Progress, Volume } from '../types';
 import MenuBuilder from './menu';
 import {
   AppUpdater,
@@ -30,9 +30,9 @@ import {
 import {
   getCookies,
   getVolumeInfo,
-  downloadAssetPromise,
   login,
   isLoggedIn,
+  downloadAsset,
 } from '../services/databrary-service';
 import {
   downloadFilePromise,
@@ -129,7 +129,7 @@ ipcMain.handle('uploadVideo', async (event, args: any[]) => {
   }
 });
 
-ipcMain.handle('downloadFiles', async (event, args: any[]) => {
+ipcMain.handle('downloadOPF', async (event, args: any[]) => {
   try {
     const filePaths = await showOpenDialog();
 
@@ -142,42 +142,137 @@ ipcMain.handle('downloadFiles', async (event, args: any[]) => {
       promiseList.push(
         downloadFilePromise(BOX_MAP.QA_DATAVYU_TEMPLATE, localFilePath).then(
           () => {
-            const cellCodes = [
-              `PLAY_${template.id}`,
-              new Date(template.birthdate).toLocaleDateString('en-US'),
-              new Date(template.date).toLocaleDateString('en-US'),
-              template.language.charAt(0).toLowerCase(),
+            const playId = [
+              `PLAY_${template.volumeId}_${template.sessionId}`,
+              new Date(template.birthdate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+              }),
+              new Date(template.date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+              }),
+              (template.language || '').charAt(0).toLowerCase(),
               '.',
             ];
 
-            insertCell(localFilePath, 'PLAY_ID', cellCodes);
+            insertCell(localFilePath, 'PLAY_ID', playId);
+
+            const qaId = [
+              `${template.siteId}`,
+              `${template.id}`,
+              '',
+              '',
+              '',
+              '',
+              '',
+            ];
+
+            insertCell(localFilePath, 'QA_ID', qaId);
           }
         )
       );
     }
 
-    Promise.all(promiseList).catch((error) => {
-      console.error('An error occured while downloading Files', error);
-    });
+    Promise.all(promiseList)
+      .then((response) => onEvent('downloadedOPF', []))
+      .catch((error) => {
+        console.error('An error occured while downloading Files', error);
+      });
   } catch (error) {
     console.log('Error while downloading box file', error);
   }
 });
 
-ipcMain.handle('downloadAssets', async (event, args: Asset[]) => {
+// TODO: Manage errors
+const downloadAssetPromise = async (
+  id: string,
+  filePath: string,
+  onEvent: <T>(channel: Channels, payload: T) => void
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const stream = createWriteStream(filePath, {
+      autoClose: true,
+    });
+
+    let progress: Progress = {
+      id,
+      path: filePath,
+      status: undefined,
+      percentage: 0,
+      message: undefined,
+      name: path.parse(filePath).base,
+    };
+
+    downloadAsset(id)
+      .then((response) => {
+        progress = {
+          ...progress,
+          status: 'STARTED',
+        };
+
+        onEvent<Progress>(`downloadProgress-${id}`, progress);
+
+        const writer = response.data.pipe(stream);
+        const totalSize = response.headers['content-length'];
+
+        let downloaded = 0;
+
+        response.data.on('data', (data: any) => {
+          downloaded += Buffer.byteLength(data);
+
+          progress = {
+            ...progress,
+            status: 'PROGRESS',
+            percentage: Math.floor((downloaded / parseFloat(totalSize)) * 100),
+          };
+
+          onEvent<Progress>(`downloadProgress-${id}`, progress);
+        });
+
+        response.data.on('end', () => {
+          console.log(`Downloaded Asset ${id}`);
+        });
+
+        writer.on('finish', () => {
+          progress = {
+            ...progress,
+            status: 'DONE',
+            percentage: 100,
+          };
+          onEvent<Progress>(`downloadProgress-${id}`, progress);
+          resolve();
+        });
+
+        return null;
+      })
+      .catch((error) => {
+        console.log(`Error while downloading asset ${id}`, error.message);
+        progress = {
+          ...progress,
+          status: 'ERRORED',
+          message: `${error.message}`,
+        };
+        onEvent<Progress>(`downloadProgress-${id}`, progress);
+        // onError<Asset>(asset.assetId, error);
+        reject();
+      });
+  });
+};
+
+ipcMain.handle('downloadAssets', async (event, args: any[]) => {
   if (!getCookies()) throw Error('You must be logged into Databrary');
 
   try {
     const filePaths = await showOpenDialog();
 
     const promiseList: Promise<void>[] = [];
-    for (const asset of args) {
-      const localFilePath = path.resolve(
-        filePaths[0],
-        `${asset.assetName || asset.assetId}.mp4`
-      );
+    for (const { name, id } of args) {
+      const localFilePath = path.resolve(filePaths[0], `${name || id}.mp4`);
 
-      promiseList.push(downloadAssetPromise(asset, localFilePath, onEvent));
+      promiseList.push(downloadAssetPromise(id, localFilePath, onEvent));
     }
 
     Promise.all(promiseList).catch((error) => {

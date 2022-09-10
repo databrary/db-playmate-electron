@@ -43,6 +43,7 @@ const SessionSummary = ({ id, participants, status = 'UNKNOWN' }: Props) => {
         </Typography>
         {participants.map((participant) => (
           <Tooltip
+            key={`participant-${participant.id}`}
             title={
               participant.id
                 ? `${TOOLTIP_MESSAGES.DATABRARY_PARTICIPANT} ${participant.id}`
@@ -51,7 +52,6 @@ const SessionSummary = ({ id, participants, status = 'UNKNOWN' }: Props) => {
             placement="top"
           >
             <Chip
-              key={`participant-${participant.id}`}
               sx={{
                 mr: 2,
               }}

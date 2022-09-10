@@ -1,17 +1,9 @@
 import { useEffect, useState } from 'react';
-import {
-  Box,
-  CircularProgress,
-  Divider,
-  IconButton,
-  ListItem,
-  ListItemText,
-  Tooltip,
-} from '@mui/material';
-import ErrorIcon from '@mui/icons-material/Error';
-import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
-import YouTubeIcon from '@mui/icons-material/YouTube';
-import { Asset as AssetType } from '../../types';
+import { Box, Divider, ListItem, ListItemText } from '@mui/material';
+import { Asset as AssetType, Progress } from '../../types';
+import AssetDownload from './AssetDownload';
+import AssetDone from './AssetDone';
+import AssetProgress from './AssetProgress';
 
 type Props = {
   asset: AssetType;
@@ -19,51 +11,26 @@ type Props = {
 
 const Asset = ({ asset: assetProp }: Props) => {
   const [asset, setAsset] = useState<AssetType>({} as AssetType);
-  const [isDownloadDone, setIsDownloadDone] = useState(false);
-  const [isDownloadStarted, setIsDownloadStarted] = useState(false);
-  const [isDownloadError, setIsDownloadError] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<
+    Progress | undefined
+  >(undefined);
 
   useEffect(() => {
-    if (!assetProp) return;
-
-    setAsset(assetProp);
+    setAsset(assetProp || {});
   }, [assetProp]);
 
-  const handleAssetDownloadEvents = (...args: unknown[]) => {
-    if (!args) return;
-
-    const newAsset = args[0] as AssetType;
-
-    if (!newAsset || newAsset.assetId !== asset.assetId) return;
-
-    setAsset(newAsset);
-  };
-
-  const handleAssetDownloadStartedEvents = (...args: unknown[]) => {
-    handleAssetDownloadEvents(args);
-    setIsDownloadStarted(true);
-  };
-
-  const handleAssetDownloadDoneEvent = (...args: unknown[]) => {
-    handleAssetDownloadEvents(args);
-    setIsDownloadDone(true);
+  const handleDownloadProgress = (...args: Progress[]) => {
+    setDownloadProgress(args[0]);
   };
 
   const onClick = () => {
-    window.electron.ipcRenderer.on(
-      'assetDownloadStarted',
-      handleAssetDownloadStartedEvents
+    window.electron.ipcRenderer.on<Progress>(
+      `downloadProgress-${asset.assetId}`,
+      handleDownloadProgress
     );
-    window.electron.ipcRenderer.on(
-      'assetDownloadProgress',
-      handleAssetDownloadEvents
-    );
-    window.electron.ipcRenderer.on(
-      'assetDownloadDone',
-      handleAssetDownloadDoneEvent
-    );
-
-    window.electron.ipcRenderer.invoke('downloadAssets', [asset]);
+    window.electron.ipcRenderer.invoke(`downloadAssets`, [
+      { name: asset.assetName, id: asset.assetId },
+    ]);
   };
 
   return (
@@ -76,33 +43,17 @@ const Asset = ({ asset: assetProp }: Props) => {
         <ListItem
           secondaryAction={
             <>
-              {isDownloadError && (
-                <IconButton aria-label="download-error" size="small">
-                  <ErrorIcon />
-                </IconButton>
+              {downloadProgress && downloadProgress.status === 'DONE' && (
+                <AssetDone />
               )}
-              {isDownloadDone && !isDownloadError && (
-                <IconButton aria-label="download-done" size="small">
-                  <DownloadDoneIcon />
-                </IconButton>
+              {downloadProgress && downloadProgress.status === 'PROGRESS' && (
+                <AssetProgress value={downloadProgress.percentage} size={20} />
               )}
-              {isDownloadStarted && !isDownloadDone && !isDownloadError && (
-                <CircularProgress
-                  variant="determinate"
-                  value={asset.percentage}
-                  size="small"
-                />
-              )}
-              {!isDownloadStarted && !isDownloadError && (
-                <Tooltip title="Download Video from Databrary" placement="top">
-                  <IconButton
-                    aria-label="download"
-                    onClick={onClick}
-                    size="small"
-                  >
-                    <YouTubeIcon />
-                  </IconButton>
-                </Tooltip>
+              {(!downloadProgress ||
+                !downloadProgress.status ||
+                (downloadProgress &&
+                  downloadProgress.status === 'ERRORED')) && (
+                <AssetDownload onClick={onClick} />
               )}
             </>
           }

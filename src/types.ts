@@ -48,8 +48,6 @@ export type Asset = {
   sessionId: string;
   sessionName: string;
   volumeId: string;
-  percentage: number;
-  path: string | undefined;
 };
 
 export type Participant = {
@@ -82,8 +80,20 @@ export type BoxEntry = {
   };
 };
 
+export type Status = 'STARTED' | 'PROGRESS' | 'ERRORED' | 'DONE' | undefined;
+
+export type Progress = {
+  id: string;
+  status: Status;
+  percentage: number;
+  message: string | undefined;
+  path: string | undefined;
+  name: string | undefined;
+};
+
 export type Databrary = {
   volumes: Record<string, Volume | Error>;
+  downloads: Record<string, Progress>;
 };
 
 export type Box = {

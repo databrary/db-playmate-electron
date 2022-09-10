@@ -1,8 +1,5 @@
 import axios from 'axios';
-import { createWriteStream } from 'fs';
 import { IVolume } from 'interfaces';
-import { Asset } from 'types';
-import { Channels } from '../constants';
 
 const BASE_API_URL = 'https://nyu.databrary.org/api';
 const BASE_URL = 'https://nyu.databrary.org';
@@ -48,68 +45,6 @@ const downloadAsset = async (assetId: string | number) => {
   });
 
   return response;
-};
-
-// TODO: Manage errors
-export const downloadAssetPromise = async (
-  asset: Asset,
-  filePath: string,
-  onEvent: <T>(channel: Channels, payload: T) => void
-): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const stream = createWriteStream(filePath, {
-      autoClose: true,
-    });
-
-    let newAsset = {
-      ...asset,
-      path: filePath,
-    };
-
-    downloadAsset(newAsset.assetId)
-      .then((response) => {
-        onEvent<Asset>('assetDownloadStarted', newAsset);
-
-        const writer = response.data.pipe(stream);
-        const totalSize = response.headers['content-length'];
-
-        let downloaded = 0;
-
-        response.data.on('data', (data: any) => {
-          downloaded += Buffer.byteLength(data);
-
-          newAsset = {
-            ...newAsset,
-            percentage: Math.floor((downloaded / parseFloat(totalSize)) * 100),
-          };
-
-          onEvent<Asset>('assetDownloadProgress', newAsset);
-        });
-
-        response.data.on('end', () => {
-          console.log(`Download Asset ${asset.assetName} ended`);
-        });
-
-        writer.on('finish', () => {
-          newAsset = {
-            ...newAsset,
-            percentage: 100,
-          };
-          onEvent<Asset>('assetDownloadDone', newAsset);
-          resolve();
-        });
-
-        return null;
-      })
-      .catch((error) => {
-        console.log(
-          `Error while downloading asset ${asset.assetName}`,
-          error.message
-        );
-        // onError<Asset>(asset.assetId, error);
-        reject();
-      });
-  });
 };
 
 const getVolumeInfo = async (volumeId: string): Promise<IVolume> => {

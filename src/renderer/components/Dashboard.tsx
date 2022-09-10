@@ -1,6 +1,13 @@
-import { useEffect, useState } from 'react';
+import { SyntheticEvent, useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
-import { Backdrop, Box, CircularProgress, Typography } from '@mui/material';
+import {
+  Alert,
+  Backdrop,
+  Box,
+  CircularProgress,
+  Snackbar,
+  Typography,
+} from '@mui/material';
 import Volume from './Volume';
 import volumes from '../../volumes.json';
 import Navigation from './Navigation';
@@ -37,23 +44,34 @@ const Dashboard = () => {
   const [selectedVolume, setSelectedVolume] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [status, setStatus] = useState('');
+  const [open, setOpen] = useState(false);
 
   const handleEvent = (...args: unknown[]) => {
     setStatus(args[0] as string);
   };
 
+  const handleDownloadOPF = (...args: unknown[]) => {
+    setOpen(true);
+  };
+
+  const handleClose = (event?: SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setOpen(false);
+  };
+
   const loadData = (volumeList) => {
     setIsFetching(true);
-    window.electron.ipcRenderer.on('status', handleEvent);
     window.electron.ipcRenderer
-      .invoke<Play>('loadData', volumeList)
+      .invoke<string, Play>('loadData', [...volumeList])
       .then(({ databrary: { volumes }, box: { videos, passed, failed } }) => {
         dispatch(addVolumes(volumes || {}));
         dispatch(addVideos(videos || []));
         dispatch(addPassed(passed || []));
         dispatch(addFailed(failed || []));
       })
-      .catch((error) => console.log(error))
       .finally(() => {
         setStatus('');
         setIsFetching(false);
@@ -61,6 +79,8 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    window.electron.ipcRenderer.on('status', handleEvent);
+    window.electron.ipcRenderer.on('downloadedOPF', handleDownloadOPF);
     setVolumeList(volumes);
   }, []);
 
@@ -68,6 +88,10 @@ const Dashboard = () => {
     loadData(volumeList || []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [volumeList]);
+
+  const onRefresh = () => {
+    loadData(volumeList || []);
+  };
 
   const onDrawerClick = (open: boolean) => {
     setDrawerOpen(open);
@@ -91,13 +115,18 @@ const Dashboard = () => {
         <CircularProgress color="inherit" />
         <Typography>{status}</Typography>
       </Backdrop>
+      <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
+        <Alert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
+          QA File Downloaded!
+        </Alert>
+      </Snackbar>
       <Box sx={{ display: 'flex' }}>
         <Navigation
           volumeList={volumeList}
           open={drawerOpen}
           onVolumeClick={onVolumeClick}
           onDrawerClick={onDrawerClick}
-          onRefresh={loadData}
+          onRefresh={onRefresh}
         />
         <Main open={drawerOpen}>
           <DrawerHeader />

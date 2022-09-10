@@ -3,17 +3,20 @@ import { Channels } from '../constants';
 
 contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
+    eventNames() {
+      return ipcRenderer.eventNames();
+    },
     removeListener(channel: Channels, listener: (...args: any[]) => void) {
       ipcRenderer.removeListener(channel, listener);
     },
     removeAllListeners(channel: Channels) {
       ipcRenderer.removeAllListeners(channel);
     },
-    sendMessage(channel: Channels, args: unknown[]) {
+    sendMessage<T>(channel: Channels, args: T[]) {
       ipcRenderer.send(channel, args);
     },
-    on(channel: Channels, func: (...args: unknown[]) => void) {
-      const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
+    on<T>(channel: Channels, func: (...args: T[]) => void) {
+      const subscription = (_event: IpcRendererEvent, ...args: T[]) =>
         func(...args);
       ipcRenderer.on(channel, subscription);
 
@@ -22,7 +25,7 @@ contextBridge.exposeInMainWorld('electron', {
     once(channel: Channels, func: (...args: unknown[]) => void) {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
     },
-    async invoke(channel: Channels, args: unknown[]) {
+    async invoke<T>(channel: Channels, args: T[]) {
       const result = await ipcRenderer.invoke(channel, args);
       return result;
     },

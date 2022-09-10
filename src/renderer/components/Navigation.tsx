@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { styled } from '@mui/material/styles';
 import {
   Toolbar,
@@ -11,8 +12,8 @@ import {
   ListItemText,
   CssBaseline,
   Box,
+  Tooltip,
 } from '@mui/material';
-
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
 import MenuIcon from '@mui/icons-material/Menu';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -22,6 +23,7 @@ import { withRouter } from 'renderer/withRouter';
 import { drawerWidth } from '../../constants';
 // import icon from '../../../assets/PLAY-logo.png';
 import DrawerHeader from './DrawerHeader';
+import DownloadMenu from './DownloadMenu';
 
 type Props = {
   navigate: NavigateFunction;
@@ -90,15 +92,25 @@ const Navigation = ({
           <Typography variant="h6" noWrap component="div">
             Play Project
           </Typography>
-          <IconButton
-            color="inherit"
-            aria-label="refresh"
-            onClick={onRefresh}
-            edge="end"
-            sx={{ ml: 'auto', ...(open && { display: 'none' }) }}
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              ml: 'auto',
+            }}
           >
-            <RefreshIcon />
-          </IconButton>
+            <Tooltip sx={{ mr: 1 }} title="Refresh Play Data">
+              <IconButton
+                color="inherit"
+                aria-label="refresh"
+                onClick={onRefresh}
+                edge="end"
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+            <DownloadMenu />
+          </Box>
         </Toolbar>
       </AppBar>
       <Drawer

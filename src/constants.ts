@@ -18,17 +18,18 @@ export const drawerWidth = 240;
 
 export type QA = 'FAILED' | 'PASSED' | 'UNKNOWN';
 
+export type DownloadProgress = `downloadProgress-${string}`;
+
 export type Channels =
   | 'loadData'
   | 'status'
   | 'databrary'
   | 'downloadAssets'
-  | 'assetDownloadStarted'
-  | 'assetDownloadProgress'
-  | 'assetDownloadDone'
+  | DownloadProgress
   | 'databraryLogin'
   | 'isDatabraryConnected'
-  | 'downloadFiles'
+  | 'downloadOPF'
+  | 'downloadedOPF'
   | 'uploadFiles'
   | 'uploadVideo'
   | 'uploadVideoStarted'

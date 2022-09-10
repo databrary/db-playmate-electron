@@ -18,9 +18,10 @@ import { getQAStatus } from '../slices/box';
 type Props = {
   session: SessionType;
   volumeId: string;
+  volumeName: string;
 };
 
-const Session = ({ session, volumeId }: Props) => {
+const Session = ({ session, volumeId, volumeName }: Props) => {
   const status = useAppSelector((state: RootState) =>
     getQAStatus(state, session.id)
   );
@@ -48,7 +49,11 @@ const Session = ({ session, volumeId }: Props) => {
         <Divider variant="middle" />
         {status === 'UNKNOWN' && Object.values(assetMap).length > 0 && (
           <>
-            <SessionActions volumeId={volumeId} session={session} />
+            <SessionActions
+              volumeId={volumeId}
+              session={session}
+              volumeName={volumeName}
+            />
             <Divider variant="middle" />
           </>
         )}

@@ -13,10 +13,11 @@ import { RootState } from '../store/store';
 
 type Props = {
   volumeId: string;
+  volumeName: string;
   session: SessionType;
 };
 
-const SessionActions = ({ session, volumeId }: Props) => {
+const SessionActions = ({ session, volumeId, volumeName }: Props) => {
   const isVideoLreadyUploaded = useAppSelector((state: RootState) =>
     isVideoInBox(state, session.id)
   );
@@ -66,10 +67,12 @@ const SessionActions = ({ session, volumeId }: Props) => {
       fileName,
       ...(Object.values(session.participants)[0] || ({} as Participant)),
       ...(Object.values(session.contexts)[0] || ({} as Context)),
-      id: volumeId,
+      volumeId,
+      sessionId: session.id,
       date: session.date || null,
+      siteId: volumeName.split('_')[1] || '',
     };
-    window.electron.ipcRenderer.invoke('downloadFiles', [arg]);
+    window.electron.ipcRenderer.invoke('downloadOPF', [arg]);
   };
   return (
     <Box

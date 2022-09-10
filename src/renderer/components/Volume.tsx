@@ -13,15 +13,15 @@ const Volume = ({ volumeId }: Props) => {
   const [sessionsMap, setSessionsMap] = useState<Record<string, SessionType>>(
     {}
   );
-  const [volumeName, setVolumeName] = useState<string | null>(null);
+  const [volumeName, setVolumeName] = useState<string>('');
 
   const getVolumeLabel = () => {
     return `Volume ${volumeId} ${volumeName ? `- ${volumeName}` : ``}`;
   };
 
   useEffect(() => {
-    setSessionsMap((volumes[volumeId] as VolumeType).sessions || {});
-    setVolumeName((volumes[volumeId] as VolumeType).name || '');
+    setSessionsMap((volumes[volumeId] as VolumeType)?.sessions || {});
+    setVolumeName((volumes[volumeId] as VolumeType)?.name || '');
   }, [volumes, volumeId]);
 
   return (
@@ -43,7 +43,12 @@ const Volume = ({ volumeId }: Props) => {
       />
       {(Object.values(sessionsMap) || []).map((session) => {
         return (
-          <Session key={session.id} session={session} volumeId={volumeId} />
+          <Session
+            key={session.id}
+            session={session}
+            volumeId={volumeId}
+            volumeName={volumeName}
+          />
         );
       })}
     </>
