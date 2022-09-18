@@ -15,6 +15,8 @@ module.exports = {
     'promise/catch-or-return': 'off',
     'react/jsx-props-no-spreading': 'off',
     'react/destructuring-assignment': 'off',
+    'react-hooks/exhaustive-deps': 'off',
+    'import/prefer-default-export': 'off',
   },
   parserOptions: {
     ecmaVersion: 2020,

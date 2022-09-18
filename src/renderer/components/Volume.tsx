@@ -3,13 +3,14 @@ import { Typography, Divider } from '@mui/material';
 import { Volume as VolumeType, Session as SessionType } from '../../types';
 import Session from './Session';
 import { useAppSelector } from '../hooks/store';
+import { RootState } from '../store/store';
 
 type Props = {
   volumeId: string;
 };
 
 const Volume = ({ volumeId }: Props) => {
-  const volumes = useAppSelector((state) => state.databrary.volumes);
+  const volumes = useAppSelector((state: RootState) => state.databrary.volumes);
   const [sessionsMap, setSessionsMap] = useState<Record<string, SessionType>>(
     {}
   );

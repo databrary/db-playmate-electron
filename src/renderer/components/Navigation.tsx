@@ -18,20 +18,18 @@ import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
 import MenuIcon from '@mui/icons-material/Menu';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import { NavigateFunction } from 'react-router-dom';
-import { withRouter } from 'renderer/withRouter';
 import { drawerWidth } from '../../constants';
-// import icon from '../../../assets/PLAY-logo.png';
 import DrawerHeader from './DrawerHeader';
 import DownloadMenu from './DownloadMenu';
+import { useAppSelector } from '../hooks/store';
+import { RootState } from '../store/store';
+import { Volume } from '../../types';
 
 type Props = {
-  navigate: NavigateFunction;
   open: boolean;
   onVolumeClick: (volume: string) => void;
   onDrawerClick: (open: boolean) => void;
   onRefresh: () => void;
-  volumeList?: string[];
 };
 
 interface AppBarProps extends MuiAppBarProps {
@@ -56,13 +54,13 @@ const AppBar = styled(MuiAppBar, {
 }));
 
 const Navigation = ({
-  navigate,
   open,
   onVolumeClick,
   onDrawerClick,
   onRefresh,
-  volumeList = [],
 }: Props) => {
+  const volumes = useAppSelector((state: RootState) => state.databrary.volumes);
+
   const onClick = (volume) => {
     if (onVolumeClick) onVolumeClick(volume);
   };
@@ -142,16 +140,16 @@ const Navigation = ({
         </DrawerHeader>
         <Divider />
         <List>
-          {volumeList.map((volume, idx) => (
-            <Box key={idx}>
+          {(Object.values(volumes) || []).map((volume) => (
+            <Box key={volume.id}>
               <ListItem disablePadding>
                 <ListItemButton>
                   <ListItemText
                     sx={{
                       ml: 2,
                     }}
-                    primary={volume}
-                    onClick={() => onClick(volume)}
+                    primary={`${volume.id} - ${(volume as Volume).name || ''}`}
+                    onClick={() => onClick(volume.id)}
                   />
                 </ListItemButton>
               </ListItem>
@@ -164,4 +162,4 @@ const Navigation = ({
   );
 };
 
-export default withRouter(Navigation);
+export default Navigation;

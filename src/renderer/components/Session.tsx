@@ -39,11 +39,7 @@ const Session = ({ session, volumeId, volumeName }: Props) => {
         aria-controls="panel1a-content"
         id="panel1a-header"
       >
-        <SessionSummary
-          id={session.id}
-          status={status}
-          participants={Object.values(session.participants) || []}
-        />
+        <SessionSummary volumeId={volumeId} status={status} session={session} />
       </AccordionSummary>
       <AccordionDetails>
         <Divider variant="middle" />

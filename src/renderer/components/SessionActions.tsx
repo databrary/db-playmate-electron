@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { IconButton, Tooltip, Box, CircularProgress } from '@mui/material';
+import { IconButton, Tooltip, Box } from '@mui/material';
+import { useSnackbar } from 'notistack';
 import UploadIcon from '@mui/icons-material/Upload';
 import DownloadIcon from '@mui/icons-material/Download';
-import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import { Context, Participant, Session as SessionType } from '../../types';
@@ -10,6 +10,7 @@ import { BOX_MAP, TOOLTIP_MESSAGES } from '../../constants';
 import { useAppSelector } from '../hooks/store';
 import { isVideoInBox } from '../slices/box';
 import { RootState } from '../store/store';
+import AssetProgress from './AssetProgress';
 
 type Props = {
   volumeId: string;
@@ -18,6 +19,8 @@ type Props = {
 };
 
 const SessionActions = ({ session, volumeId, volumeName }: Props) => {
+  const { enqueueSnackbar } = useSnackbar();
+
   const isVideoLreadyUploaded = useAppSelector((state: RootState) =>
     isVideoInBox(state, session.id)
   );
@@ -26,7 +29,16 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
   const [isUploadDone, setIsUploadDone] = useState(false);
 
   const onQA = (folderId: string) => {
-    window.electron.ipcRenderer.invoke('uploadFiles', [folderId]);
+    window.electron.ipcRenderer
+      .invoke('uploadFile', [folderId])
+      .then((file) => {
+        enqueueSnackbar('File Uploaded', { variant: 'success' });
+      })
+      .catch((error) =>
+        enqueueSnackbar(`Error uploading QA File ${error.message}`, {
+          variant: 'error',
+        })
+      );
   };
 
   const buildDatavyuTemplateName = (volumeId: string, sessionId: string) => {
@@ -40,9 +52,14 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
   const handleUploadProgressEvent = (...args: unknown[]) => {
     setUploadProgress(args[0] as number);
   };
-
   const handleUploadDoneEvent = (...args: unknown[]) => {
     setIsUploadDone(true);
+  };
+
+  const handleUploadErrorEvent = (...args: unknown[]) => {
+    enqueueSnackbar(`Error uploading Video to BOX ${args[0]}`, {
+      variant: 'error',
+    });
   };
 
   const onUploadVideo = () => {
@@ -55,7 +72,7 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
       handleUploadProgressEvent
     );
     window.electron.ipcRenderer.on('uploadVideoDone', handleUploadDoneEvent);
-    window.electron.ipcRenderer.on('uploadVideoDone', handleUploadDoneEvent);
+    window.electron.ipcRenderer.on('uploadVideoError', handleUploadErrorEvent);
 
     window.electron.ipcRenderer.invoke('uploadVideo', [
       `PLAY_${volumeId}_${session.id}_NaturalPlay`,
@@ -63,13 +80,13 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
   };
 
   const onDownloadDatavyuTemplate = (fileName: string) => {
-    const arg: Record<string, unknown> = {
+    const arg: Record<string, string> = {
       fileName,
-      ...(Object.values(session.participants)[0] || ({} as Participant)),
       ...(Object.values(session.contexts)[0] || ({} as Context)),
+      ...(Object.values(session.participants)[0] || ({} as Participant)),
       volumeId,
       sessionId: session.id,
-      date: session.date || null,
+      date: session.date,
       siteId: volumeName.split('_')[1] || '',
     };
     window.electron.ipcRenderer.invoke('downloadOPF', [arg]);
@@ -114,22 +131,17 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
           <DownloadIcon />
         </IconButton>
       </Tooltip>
-      {isUploadStarted && (
-        <CircularProgress
-          variant="determinate"
+      {isUploadStarted && !isUploadDone && (
+        <AssetProgress
+          variant={uploadProgress === 0 ? undefined : 'determinate'}
           value={uploadProgress}
-          size={24}
+          size={20}
         />
       )}
-      {isUploadDone && (
-        <IconButton aria-label="download-done">
-          <DownloadDoneIcon />
-        </IconButton>
-      )}
-      {!isUploadStarted && !isUploadDone && (
+      {(!isUploadStarted || isUploadDone) && (
         <Tooltip
           title={
-            isVideoLreadyUploaded
+            isVideoLreadyUploaded || isUploadDone
               ? TOOLTIP_MESSAGES.BOX_VIDEO_ALREADY_UPLOADED
               : TOOLTIP_MESSAGES.BOX_VIDEO_UPLOAD
           }
@@ -139,7 +151,7 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
             <IconButton
               aria-label="upload-video"
               onClick={onUploadVideo}
-              disabled={isVideoLreadyUploaded}
+              disabled={isVideoLreadyUploaded || isUploadDone}
             >
               <UploadIcon />
             </IconButton>

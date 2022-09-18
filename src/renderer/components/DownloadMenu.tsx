@@ -27,7 +27,7 @@ const DownloadMenu = () => {
   return (
     <>
       <Tooltip title="Downloads">
-        <IconButton color="inherit" onClick={handleOpenUserMenu} disabled>
+        <IconButton color="inherit" onClick={handleOpenUserMenu}>
           <DashboardIcon />
         </IconButton>
       </Tooltip>

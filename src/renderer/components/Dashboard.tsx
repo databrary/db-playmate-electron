@@ -1,13 +1,7 @@
-import { SyntheticEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
-import {
-  Alert,
-  Backdrop,
-  Box,
-  CircularProgress,
-  Snackbar,
-  Typography,
-} from '@mui/material';
+import { Backdrop, Box, CircularProgress, Typography } from '@mui/material';
+import { useSnackbar } from 'notistack';
 import Volume from './Volume';
 import volumes from '../../volumes.json';
 import Navigation from './Navigation';
@@ -38,28 +32,21 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
 }));
 
 const Dashboard = () => {
+  const { enqueueSnackbar } = useSnackbar();
+
   const dispatch = useAppDispatch();
   const [volumeList, setVolumeList] = useState<string[]>([]);
   const [isFetcching, setIsFetching] = useState(false);
   const [selectedVolume, setSelectedVolume] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [status, setStatus] = useState('');
-  const [open, setOpen] = useState(false);
 
   const handleEvent = (...args: unknown[]) => {
     setStatus(args[0] as string);
   };
 
   const handleDownloadOPF = (...args: unknown[]) => {
-    setOpen(true);
-  };
-
-  const handleClose = (event?: SyntheticEvent | Event, reason?: string) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-
-    setOpen(false);
+    enqueueSnackbar(`QA File Downloaded!`, { variant: 'success' });
   };
 
   const loadData = (volumeList) => {
@@ -115,14 +102,8 @@ const Dashboard = () => {
         <CircularProgress color="inherit" />
         <Typography>{status}</Typography>
       </Backdrop>
-      <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
-        <Alert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
-          QA File Downloaded!
-        </Alert>
-      </Snackbar>
       <Box sx={{ display: 'flex' }}>
         <Navigation
-          volumeList={volumeList}
           open={drawerOpen}
           onVolumeClick={onVolumeClick}
           onDrawerClick={onDrawerClick}

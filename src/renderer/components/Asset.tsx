@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Box, Divider, ListItem, ListItemText } from '@mui/material';
+import { useSnackbar } from 'notistack';
 import { Asset as AssetType, Progress } from '../../types';
 import AssetDownload from './AssetDownload';
-import AssetDone from './AssetDone';
 import AssetProgress from './AssetProgress';
 
 type Props = {
@@ -10,6 +10,8 @@ type Props = {
 };
 
 const Asset = ({ asset: assetProp }: Props) => {
+  const { enqueueSnackbar } = useSnackbar();
+
   const [asset, setAsset] = useState<AssetType>({} as AssetType);
   const [downloadProgress, setDownloadProgress] = useState<
     Progress | undefined
@@ -18,6 +20,21 @@ const Asset = ({ asset: assetProp }: Props) => {
   useEffect(() => {
     setAsset(assetProp || {});
   }, [assetProp]);
+
+  useEffect(() => {
+    if (!downloadProgress) return;
+
+    if (downloadProgress.status === 'DONE') {
+      enqueueSnackbar(`Asset ${downloadProgress.id} downloaded!`, {
+        variant: 'success',
+      });
+    }
+    if (downloadProgress.status === 'ERRORED') {
+      enqueueSnackbar(`Error downloading Asset ${downloadProgress.id}`, {
+        variant: 'error',
+      });
+    }
+  }, [downloadProgress]);
 
   const handleDownloadProgress = (...args: Progress[]) => {
     setDownloadProgress(args[0]);
@@ -43,16 +60,9 @@ const Asset = ({ asset: assetProp }: Props) => {
         <ListItem
           secondaryAction={
             <>
-              {downloadProgress && downloadProgress.status === 'DONE' && (
-                <AssetDone />
-              )}
-              {downloadProgress && downloadProgress.status === 'PROGRESS' && (
+              {downloadProgress && downloadProgress.status === 'PROGRESS' ? (
                 <AssetProgress value={downloadProgress.percentage} size={20} />
-              )}
-              {(!downloadProgress ||
-                !downloadProgress.status ||
-                (downloadProgress &&
-                  downloadProgress.status === 'ERRORED')) && (
+              ) : (
                 <AssetDownload onClick={onClick} />
               )}
             </>

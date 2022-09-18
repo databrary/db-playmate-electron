@@ -1,8 +1,11 @@
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
 import { Channels } from '../constants';
 
 contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
+    openExternal(url: string) {
+      shell.openExternal(url);
+    },
     eventNames() {
       return ipcRenderer.eventNames();
     },

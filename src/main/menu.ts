@@ -6,7 +6,7 @@ import {
   MenuItemConstructorOptions,
 } from 'electron';
 import url from 'url';
-import { resolveHtmlPath } from './util';
+import { resolveHtmlPath } from './extensions';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;

@@ -31,7 +31,10 @@ const isSessionIdInEntries = (entries: BoxEntry[], sessionId: string) => {
 };
 
 export const getQAStatus = createSelector(
-  [(state: RootState) => state.box, (state: RootState, sessionId) => sessionId],
+  [
+    (state: RootState) => state.box,
+    (state: RootState, sessionId: string) => sessionId,
+  ],
   (box: Box, sessionId): QA => {
     if (isSessionIdInEntries(box.passed, sessionId)) return 'PASSED';
     if (isSessionIdInEntries(box.failed, sessionId)) return 'FAILED';

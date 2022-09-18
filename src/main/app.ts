@@ -18,15 +18,15 @@ import {
   OpenDialogOptions,
 } from 'electron';
 import { statSync, createWriteStream } from 'fs';
-import { Asset, Error, Progress, Volume } from '../types';
+import { Error, Progress, Volume } from '../types';
 import MenuBuilder from './menu';
+import { getVolume } from '../util';
 import {
   AppUpdater,
-  getVolume,
   installExtensions,
   isDebugMode,
   resolveHtmlPath,
-} from './util';
+} from './extensions';
 import {
   getCookies,
   getVolumeInfo,
@@ -77,20 +77,21 @@ const onEvent = <T>(channel: Channels, payload: T) => {
   appWindow.webContents.send(channel, payload);
 };
 
-ipcMain.handle('uploadFiles', async (event, args: any[]) => {
-  try {
-    const filePaths = await showOpenDialog({
-      properties: ['openFile'],
-    });
+ipcMain.handle('uploadFile', async (event, args: any[]) => {
+  if (args.length !== 1) throw Error(`More that one box folder was provided`);
+  const folderId = args[0];
 
-    for (const folderId of args) {
-      uploadFile(folderId, filePaths[0], path.basename(filePaths[0])).then(
-        (_) => console.log('File Uploaded')
-      );
-    }
-  } catch (error) {
-    console.log('Error while upload file to box', (error as any).message);
-  }
+  const filePaths = await showOpenDialog({
+    properties: ['openFile'],
+  });
+
+  const file = await uploadFile(
+    folderId,
+    filePaths[0],
+    path.basename(filePaths[0])
+  );
+
+  return file;
 });
 
 ipcMain.handle('uploadVideo', async (event, args: any[]) => {
@@ -125,6 +126,7 @@ ipcMain.handle('uploadVideo', async (event, args: any[]) => {
     onEvent('uploadVideoStarted', 0);
     await uploader.start();
   } catch (error) {
+    onEvent('uploadVideoError', (error as any).message);
     console.log('Error while upload video to box', (error as any).message);
   }
 });
@@ -154,8 +156,12 @@ ipcMain.handle('downloadOPF', async (event, args: any[]) => {
                 month: '2-digit',
                 day: '2-digit',
               }),
-              (template.language || '').charAt(0).toLowerCase(),
-              '.',
+              template.language && template.language.split(',')[0]
+                ? template.language.split(',')[0].trim().charAt(0).toLowerCase()
+                : '.',
+              template.language && template.language.split(',')[1]
+                ? template.language.split(',')[1].trim().charAt(0).toLowerCase()
+                : '.',
             ];
 
             insertCell(localFilePath, 'PLAY_ID', playId);

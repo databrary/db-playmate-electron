@@ -4,6 +4,7 @@ declare global {
   interface Window {
     electron: {
       ipcRenderer: {
+        openExternal(url: string): void;
         eventNames(): string[];
         removeListener<T>(
           channel: Channels,

@@ -8,7 +8,7 @@ import {
   logout,
 } from '../services/box-service';
 import { createAppWindow } from './app';
-import { installExtensions, isDebugMode } from './util';
+import { installExtensions, isDebugMode } from './extensions';
 
 let authWindow: BrowserWindow | null = null;
 
