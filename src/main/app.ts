@@ -18,7 +18,7 @@ import {
   OpenDialogOptions,
 } from 'electron';
 import { statSync, createWriteStream } from 'fs';
-import { Error, Progress, Volume } from '../types';
+import { Error, Progress, Volume, Channels } from '../types';
 import MenuBuilder from './menu';
 import { getVolume } from '../util';
 import {
@@ -41,7 +41,8 @@ import {
   uploadFile,
 } from '../services/box-service';
 import { insertCell } from '../services/datavyu-service';
-import { BOX_MAP, Channels } from '../constants';
+import { BOX_MAP } from '../constants';
+import { OPF } from '../OPF';
 
 let appWindow: BrowserWindow | null = null;
 
@@ -91,7 +92,12 @@ ipcMain.handle('uploadFile', async (event, args: any[]) => {
     path.basename(filePaths[0])
   );
 
-  return file;
+  if (folderId === BOX_MAP.QA_FAILED) {
+    return file;
+  }
+  // Extract Column (PLAY_ID and baby_comment) with Cell
+  // Get Onset and Offset of PLAY_ID
+  const qaOPF = OPF.readOPF(filePaths[0]);
 });
 
 ipcMain.handle('uploadVideo', async (event, args: any[]) => {

@@ -106,3 +106,28 @@ export type Play = {
   databrary: Databrary;
   box: Box;
 };
+
+export type QA = 'FAILED' | 'PASSED' | 'UNKNOWN';
+export type Study = 'EMO' | 'TRA' | 'OBJ' | 'LOC';
+
+export type DownloadProgress = `downloadProgress-${string}`;
+type BoxUploadEvents =
+  | 'uploadVideoStarted'
+  | 'uploadVideoProgress'
+  | 'uploadVideoDone'
+  | 'uploadVideoError';
+
+// TODO: CLEAN ME!!!
+export type Channels =
+  | 'loadData'
+  | 'status'
+  | 'databrary'
+  | 'downloadAssets'
+  | DownloadProgress
+  | 'databraryLogin'
+  | 'isDatabraryConnected'
+  | 'downloadOPF'
+  | 'downloadedOPF'
+  | 'uploadFile'
+  | 'uploadVideo'
+  | BoxUploadEvents;

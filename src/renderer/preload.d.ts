@@ -1,4 +1,4 @@
-import { Channels } from '../constants';
+import { Channels } from '../types';
 
 declare global {
   interface Window {

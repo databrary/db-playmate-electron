@@ -168,3 +168,5 @@ export const getVolume = (volume: IVolume | Error): Volume | Error => {
     sessions,
   };
 };
+
+export const buildOPF = (qa: OPF, qaLoc: OPF) => {};

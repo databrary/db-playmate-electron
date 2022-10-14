@@ -1,8 +1,7 @@
 import { createSlice, createSelector } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store/store';
-import { Box, BoxEntry } from '../../types';
-import { QA } from '../../constants';
+import { Box, BoxEntry, QA } from '../../types';
 
 const initialState: Box = {
   videos: [],

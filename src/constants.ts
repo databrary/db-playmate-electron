@@ -1,9 +1,21 @@
-import { Participant, Session } from 'types';
+import { Session, Study } from './types';
+import { buildOPF } from './util';
+
+export const STUDY_MAP: Record<Study, any> = {
+  EMO: { func: buildOPF },
+  LOC: { func: buildOPF },
+  OBJ: { func: buildOPF },
+  TRA: { func: buildOPF },
+};
 
 export const BOX_MAP = {
   PLAY_PROJECT_FOLDER_ID: '93875323133',
   UPLOAD_PASSED_VIDEO: '101782445650',
   QA_DATAVYU_TEMPLATE: '949804886008',
+  QA_DATAVYU_TEMPLATE_EMO: '1018859541787',
+  QA_DATAVYU_TEMPLATE_LOC: '1018862496372',
+  QA_DATAVYU_TEMPLATE_OBJ: '1018859268695',
+  QA_DATAVYU_TEMPLATE_TRA: '1018855042547',
   QA_PASSED: '103319942062',
   QA_FAILED: '122812409466',
 };
@@ -66,26 +78,3 @@ export const PLAY_SESSION_NAME_CHECKS = {
 };
 
 export const drawerWidth = 280;
-
-export type QA = 'FAILED' | 'PASSED' | 'UNKNOWN';
-
-export type DownloadProgress = `downloadProgress-${string}`;
-type BoxUploadEvents =
-  | 'uploadVideoStarted'
-  | 'uploadVideoProgress'
-  | 'uploadVideoDone'
-  | 'uploadVideoError';
-
-export type Channels =
-  | 'loadData'
-  | 'status'
-  | 'databrary'
-  | 'downloadAssets'
-  | DownloadProgress
-  | 'databraryLogin'
-  | 'isDatabraryConnected'
-  | 'downloadOPF'
-  | 'downloadedOPF'
-  | 'uploadFile'
-  | 'uploadVideo'
-  | BoxUploadEvents;

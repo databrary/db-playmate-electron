@@ -11,12 +11,8 @@ import {
 import FaceIcon from '@mui/icons-material/Face';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import InfoIcon from '@mui/icons-material/Info';
-import { Session } from '../../types';
-import {
-  PLAY_SESSION_NAME_CHECKS,
-  QA,
-  TOOLTIP_MESSAGES,
-} from '../../constants';
+import { QA, Session } from '../../types';
+import { PLAY_SESSION_NAME_CHECKS, TOOLTIP_MESSAGES } from '../../constants';
 
 type Props = {
   volumeId: string;
