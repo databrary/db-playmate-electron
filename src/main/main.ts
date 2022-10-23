@@ -33,4 +33,9 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('ready', showWindow);
+app
+  .whenReady()
+  .then(() => {
+    showWindow();
+  })
+  .catch(console.log);

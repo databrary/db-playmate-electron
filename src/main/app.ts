@@ -304,7 +304,7 @@ const getVolumes = async (volumes: string[]) => {
       const volumeInfo = await getVolumeInfo(volumeId);
       volumesMap[volumeId] = getVolume(volumeInfo);
     } catch (error) {
-      console.log('getVolumes - Error', (error as any).message);
+      console.log(`getVolumes - ${volumeId} - Error`, (error as any).message);
 
       onEvent('status', `Error while fetching Volume ${volumeId} data...`);
       volumesMap[volumeId] = {

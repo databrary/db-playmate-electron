@@ -1,18 +1,19 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable prefer-destructuring */
 /* eslint-disable max-classes-per-file */
-import Zip from 'adm-zip';
+import Zip, { IZipEntry } from 'adm-zip';
+import path from 'path';
 
 const DEFAULT_ONSET = '00:00:00:000';
 const DEFAULT_OFFSET = '00:00:00:000';
 const DEFAULT_VALUE = '';
 
 export class Cell {
-  _onset: string;
+  private _onset: string;
 
-  _offset: string;
+  private _offset: string;
 
-  _value: string;
+  private _value: string;
 
   constructor(onset: string, offset: string, value: string) {
     this._onset = onset;
@@ -38,11 +39,11 @@ export class Cell {
 }
 
 export class Column {
-  _name: string;
+  private _name: string;
 
-  _codes: string;
+  private _codes: string;
 
-  _cells: Cell[] = [];
+  private _cells: Cell[] = [];
 
   constructor(name: string, codes: string, cells: Cell[] = []) {
     this._name = name;
@@ -62,6 +63,10 @@ export class Column {
     return this._cells;
   }
 
+  public cell = (cellIndex: number): Cell => {
+    return this._cells[cellIndex];
+  };
+
   public addCell = (cell: Cell) => {
     this._cells.push(cell);
   };
@@ -72,30 +77,20 @@ export class Column {
 
     return str.join('\r\n');
   };
-
-  // buildCelles = (cells: string[]) => {
-  //   const cellList: Cell[] = [];
-  //   for (const cell of cells) {
-  //     const [onset, offset, ...rest] = cell.split(',');
-  //     cellList.push(new Cell(onset, offset, rest.join(',')));
-  //   }
-  //   return cellList;
-  // };
 }
 
 export class OPF {
-  _columns: Record<string, Column> = {};
+  private _columns: Record<string, Column> = {};
 
-  static readOPF = (filePath: string) => {
-    const zip = new Zip(filePath);
-    const db: Zip.IZipEntry | null = zip.getEntry('db');
+  private _project: string;
 
-    if (!db) throw new Error('Cannot find db file in the OPF file');
+  private _name: string;
+
+  private static getColumns = (dbContent: string[]): Column[] => {
     const columns: Column[] = [];
-    const contentList = zip.readAsText(db).split(/\r?\n/);
     // eslint-disable-next-line no-undef-init
     let currColumn: Column | undefined = undefined;
-    for (const content of contentList) {
+    for (const content of dbContent) {
       // Ignore db version
       if (content.startsWith('#')) continue;
 
@@ -120,59 +115,86 @@ export class OPF {
       }
     }
 
-    return new OPF(columns);
+    return columns;
+  };
+
+  private static getName = (filePath: string) => {
+    return path.basename(filePath).split('.')[0];
+  };
+
+  static readOPF = (filePath: string) => {
+    const zip = new Zip(filePath);
+    const db: IZipEntry | null = zip.getEntry('db');
+
+    if (!db) throw new Error('Cannot find db file in the OPF file');
+    const contentList = zip.readAsText(db).split(/\r?\n/);
+
+    const project: IZipEntry | null = zip.getEntry('project');
+    let projectContent = '';
+    if (project) {
+      projectContent = zip.readAsText(project);
+    }
+
+    return new OPF(
+      OPF.getName(filePath),
+      OPF.getColumns(contentList),
+      projectContent
+    );
   };
 
   static writeOPF = (filePath: string, opf: OPF) => {
     const zip = new Zip();
-    zip.addFile('db', Buffer.from(opf.toString(), 'utf-8'));
+    zip.addFile(
+      `db`,
+      Buffer.from(
+        `#4\r\n${opf.db.map((col) => col.toString()).join('\r\n')}`,
+        'utf-8'
+      )
+    );
+    zip.addFile(`project`, Buffer.from(opf.project, 'utf-8'));
     zip.writeZip(filePath);
   };
 
-  private constructor(columns: Column[]) {
-    this._columns = columns.reduce((a, v) => ({ ...a, [v.name]: v }), {});
+  private constructor(name: string, columns: Column[], project: string) {
+    this._columns = columns.reduce(
+      (a, v) => ({ ...a, [v.name.toLowerCase()]: v }),
+      {}
+    );
+    this._project = project;
+    this._name = name;
   }
 
   static isColumn = (str: string): boolean => {
     return str.split(' ').length > 1;
   };
 
-  public get columns() {
-    return this._columns;
+  public get db() {
+    return Object.values(this._columns);
   }
+
+  public get name() {
+    return this._name;
+  }
+
+  public get project() {
+    return this._project;
+  }
+
+  public column = (name: string): Column => {
+    return this._columns[name.toLocaleLowerCase()];
+  };
+
+  public addColumn = (name: string, column: Column) => {
+    if (name in this._columns)
+      throw Error(`Column ${name} already exists in the OPF file`);
+
+    this._columns[name] = column;
+  };
 
   public toString = (): string => {
     const str: string[] = [];
-    str.push(...Object.values(this.columns).map((col) => col.toString()));
+    str.push(...Object.values(this._columns).map((col) => col.toString()));
 
     return str.join('\r\n');
   };
-
-  // buildColumns = (entry: Zip.IZipEntry): Record<string, Column> => {
-  //   const contentList = this.zip.readAsText(entry).split(/\r?\n/);
-  //   const columns: Record<string, Column> = {};
-  //   let currentColumn: string | null = null;
-  //   let currentCodes: string | null = null;
-  //   let cells: string[] = [];
-  //   for (const content of contentList) {
-  //     if (this.isColumn(content) && currentColumn == null) {
-  //       currentColumn = content.split(' ')[0];
-  //       currentCodes = content.split(' ')[1];
-  //       cells = [];
-  //     } else if (
-  //       this.isColumn(content) &&
-  //       currentColumn !== null &&
-  //       currentCodes !== null &&
-  //       content.split(' ')[0] !== currentColumn
-  //     ) {
-  //       columns[currentColumn] = new Column(currentColumn, currentCodes, cells);
-  //       currentColumn = content.split(' ')[0];
-  //       currentCodes = content.split(' ')[1];
-  //       cells = [];
-  //     } else {
-  //       cells.push(content);
-  //     }
-  //   }
-  //   return columns;
-  // };
 }
