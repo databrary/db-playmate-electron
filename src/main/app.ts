@@ -43,8 +43,11 @@ import {
 import { insertCell } from '../services/datavyu-service';
 import { BOX_MAP } from '../constants';
 import { OPF } from '../OPF';
+import envVariables from '../../env.json';
 
 let appWindow: BrowserWindow | null = null;
+
+const { DATABRARY_USERNAME, DATABRARY_PASSWORD } = envVariables;
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -357,12 +360,17 @@ const getQAFailed = async (folderId = BOX_MAP.QA_FAILED) => {
 
 ipcMain.handle('loadData', async (event, args) => {
   if (!getCookies()) throw Error('You must be logged into Databrary');
+  const volumes = await getVolumes(args);
+  const videos = await getBoxVideos();
+  const passed = await getQAPassed();
+  const failed = await getQAFailed();
+
   return {
-    databrary: { volumes: await getVolumes(args) },
+    databrary: { volumes },
     box: {
-      videos: await getBoxVideos(),
-      passed: await getQAPassed(),
-      failed: await getQAFailed(),
+      videos,
+      passed,
+      failed,
     },
   };
 });
@@ -377,7 +385,15 @@ ipcMain.handle('databraryLogin', async (event, args) => {
 });
 
 ipcMain.handle('isDatabraryConnected', async (event, args) => {
-  return isLoggedIn();
+  if (process.env.NODE_ENV !== 'development') return isLoggedIn();
+
+  try {
+    await login(DATABRARY_USERNAME, DATABRARY_PASSWORD);
+  } catch (error) {
+    throw Error(`Cannot login to Databrary - ${(error as any).message}`);
+  }
+
+  return true;
 });
 
 // eslint-disable-next-line import/prefer-default-export

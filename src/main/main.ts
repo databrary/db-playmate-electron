@@ -9,13 +9,31 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import { app } from 'electron';
-import { refreshTokens } from '../services/box-service';
+import {
+  getAccessToken,
+  refreshTokens,
+  setBearer,
+  setClient,
+} from '../services/box-service';
 import { createAuthWindow } from './auth';
 import { createAppWindow } from './app';
 
-const showWindow = async () => {
+const authenticate = async () => {
   try {
     await refreshTokens();
+  } catch (error) {
+    // if Development try to load token if saved in the box-service instance
+    if (process.env.NODE_ENV !== 'development') throw error;
+    const accessToken = getAccessToken();
+    if (!accessToken) throw error;
+    setClient(accessToken);
+    setBearer(accessToken);
+  }
+};
+
+const showWindow = async () => {
+  try {
+    await authenticate();
     createAppWindow();
   } catch (error) {
     createAuthWindow();

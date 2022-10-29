@@ -43,10 +43,18 @@ const getAuthenticationURL = () => {
   return `${BASE_URL}/authorize?response_type=code&client_id=${BOX_CLIENT_ID}&redirect_uri=${BOX_REDIRECT_URI}`;
 };
 
+const setBearer = (accessToken: string) => {
+  axiosInstance.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+};
+
+const setClient = (accessToken: string) => {
+  client = BoxSDK.getBasicClient(accessToken);
+};
+
 const refreshTokens = async () => {
   const refreshToken = await keytar.getPassword(keytarService, keytarAccount);
 
-  if (!refreshToken) throw new Error('No available refresh token.');
+  if (!refreshToken) throw new Error('Refresh token not available.');
 
   const refreshOptions = {
     grant_type: 'refresh_token',
@@ -62,8 +70,11 @@ const refreshTokens = async () => {
     );
 
     accessToken = response.data.access_token;
-    client = BoxSDK.getBasicClient(accessToken);
-    axiosInstance.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+
+    if (!accessToken) throw Error('Access Token not defined');
+
+    setClient(accessToken);
+    setBearer(accessToken);
   } catch (error) {
     await logout();
 
@@ -88,10 +99,14 @@ const loadTokens = async (callbackURL: string) => {
       `https://api.box.com/oauth2/token`,
       querystring.stringify(exchangeOptions)
     );
+
     accessToken = response.data.access_token;
-    client = BoxSDK.getBasicClient(accessToken);
-    axiosInstance.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
     refreshToken = response.data.refresh_token;
+
+    if (!accessToken) throw Error('Box error: the accessToken is not returned');
+
+    setClient(accessToken);
+    setBearer(accessToken);
     if (refreshToken) {
       await keytar.setPassword(keytarService, keytarAccount, refreshToken);
     }
@@ -184,4 +199,6 @@ export {
   uploadFile,
   downloadFilePromise,
   ls,
+  setClient,
+  setBearer,
 };

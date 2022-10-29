@@ -29,8 +29,7 @@ const login = async (email: string, password: string, superuser = false) => {
     superuser,
   });
 
-  const setCookie = (response.headers['set-cookie'] || [])[0];
-  axiosInstance.defaults.headers.common.Cookie = setCookie;
+  axiosInstance.defaults.headers.common.Cookie = response.headers['set-cookie'];
   axiosInstance.defaults.headers.common['x-csverf'] = response.data.csverf;
 };
 
