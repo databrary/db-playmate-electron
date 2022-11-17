@@ -5,7 +5,7 @@ import { useSnackbar } from 'notistack';
 import Volume from './Volume';
 import volumes from '../../volumes.json';
 import Navigation from './Navigation';
-import { drawerWidth } from '../../constants';
+import { drawerWidth } from '../constants';
 import DrawerHeader from './DrawerHeader';
 import { useAppDispatch } from '../hooks/store';
 import { addVolumes } from '../slices/databrary';
@@ -49,7 +49,7 @@ const Dashboard = () => {
     enqueueSnackbar(`QA File Downloaded!`, { variant: 'success' });
   };
 
-  const loadData = (volumeList) => {
+  const loadData = (volumeList: string[]) => {
     setIsFetching(true);
     window.electron.ipcRenderer
       .invoke<string, Play>('loadData', [...volumeList])
@@ -73,7 +73,6 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadData(volumeList || []);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [volumeList]);
 
   const onRefresh = () => {

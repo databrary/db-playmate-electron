@@ -42,16 +42,14 @@ const Volume = ({ volumeId }: Props) => {
         }}
         variant="middle"
       />
-      {(Object.values(sessionsMap) || []).map((session) => {
-        return (
-          <Session
-            key={session.id}
-            session={session}
-            volumeId={volumeId}
-            volumeName={volumeName}
-          />
-        );
-      })}
+      {(Object.values(sessionsMap) || []).map((session) => (
+        <Session
+          key={session.id}
+          session={session}
+          volumeId={volumeId}
+          volumeName={volumeName}
+        />
+      ))}
     </>
   );
 };

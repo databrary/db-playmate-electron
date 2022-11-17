@@ -18,9 +18,17 @@ import {
   OpenDialogOptions,
 } from 'electron';
 import { statSync, createWriteStream } from 'fs';
-import { Error, Progress, Volume, Channels } from '../types';
+import {
+  Error,
+  Progress,
+  Volume,
+  Channels,
+  StudyDownloadFunction,
+  StudyBuildFunction,
+  StudyFileNameFunction,
+} from '../types';
 import MenuBuilder from './menu';
-import { getVolume } from '../util';
+import { getVolume, STUDY_MAP } from '../util';
 import {
   AppUpdater,
   installExtensions,
@@ -40,9 +48,8 @@ import {
   uploadChunkFile,
   uploadFile,
 } from '../services/box-service';
-import { insertCell } from '../services/datavyu-service';
 import { BOX_MAP } from '../constants';
-import { OPF } from '../OPF';
+import { Cell, Column, OPF } from '../OPF';
 import envVariables from '../../env.json';
 
 let appWindow: BrowserWindow | null = null;
@@ -98,9 +105,25 @@ ipcMain.handle('uploadFile', async (event, args: any[]) => {
   if (folderId === BOX_MAP.QA_FAILED) {
     return file;
   }
-  // Extract Column (PLAY_ID and baby_comment) with Cell
-  // Get Onset and Offset of PLAY_ID
+
   const qaOPF = OPF.readOPF(filePaths[0]);
+
+  Object.entries(STUDY_MAP).forEach(
+    async ([key, { download, build, resolveFilePath }]) => {
+      const newFilePath = (resolveFilePath as StudyFileNameFunction)(
+        path.parse(filePaths[0])
+      );
+
+      await (download as StudyDownloadFunction)(newFilePath);
+
+      const newOPF = (build as StudyBuildFunction)(
+        qaOPF,
+        OPF.readOPF(newFilePath)
+      );
+
+      OPF.writeOPF(newFilePath, newOPF);
+    }
+  );
 });
 
 ipcMain.handle('uploadVideo', async (event, args: any[]) => {
@@ -153,14 +176,17 @@ ipcMain.handle('downloadOPF', async (event, args: any[]) => {
       promiseList.push(
         downloadFilePromise(BOX_MAP.QA_DATAVYU_TEMPLATE, localFilePath).then(
           () => {
+            const qaOPF = OPF.readOPF(localFilePath);
             const playId = [
               `PLAY_${template.volumeId}_${template.sessionId}`,
               new Date(template.birthdate).toLocaleDateString('en-US', {
+                timeZone: 'UTC',
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
               }),
               new Date(template.date).toLocaleDateString('en-US', {
+                timeZone: 'UTC',
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
@@ -173,7 +199,9 @@ ipcMain.handle('downloadOPF', async (event, args: any[]) => {
                 : '.',
             ];
 
-            insertCell(localFilePath, 'PLAY_ID', playId);
+            qaOPF.clearColumn('PLAY_ID');
+            const playIdColumn = qaOPF.column('PLAY_ID');
+            playIdColumn.addCell(new Cell(`(${playId.join(',')})`));
 
             const qaId = [
               `${template.siteId}`,
@@ -184,8 +212,10 @@ ipcMain.handle('downloadOPF', async (event, args: any[]) => {
               '',
               '',
             ];
-
-            insertCell(localFilePath, 'QA_ID', qaId);
+            qaOPF.clearColumn('QA_ID');
+            const qaIdColumn = qaOPF.column('QA_ID');
+            qaIdColumn.addCell(new Cell(`(${qaId.join(',')})`));
+            OPF.writeOPF(localFilePath, qaOPF);
           }
         )
       );

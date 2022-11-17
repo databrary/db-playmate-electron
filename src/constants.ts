@@ -1,12 +1,4 @@
-import { Session, Study } from './types';
-import { buildOPF } from './util';
-
-export const STUDY_MAP: Record<Study, any> = {
-  EMO: { func: buildOPF },
-  LOC: { func: buildOPF },
-  OBJ: { func: buildOPF },
-  TRA: { func: buildOPF },
-};
+import { Session } from './types';
 
 export const BOX_MAP = {
   PLAY_PROJECT_FOLDER_ID: '93875323133',
@@ -76,5 +68,3 @@ export const PLAY_SESSION_NAME_CHECKS = {
       session.name.split('_')[2] in session.participants,
   },
 };
-
-export const drawerWidth = 280;

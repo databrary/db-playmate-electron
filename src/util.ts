@@ -1,5 +1,19 @@
-import { Context, Error, Volume, Session, Participant, Asset } from './types';
+import { ParsedPath, resolve } from 'path';
+import {
+  Context,
+  Error,
+  Volume,
+  Session,
+  Participant,
+  Asset,
+  Study,
+  StudyFunctions,
+  StudyKeys,
+} from './types';
 import { IContainer, IRecord, IVolume } from './interfaces';
+import { Cell, OPF } from './OPF';
+import { downloadFilePromise } from './services/box-service';
+import { BOX_MAP } from './constants';
 
 const getContexts = (recordList: IRecord[]): Context[] => {
   return recordList
@@ -53,7 +67,7 @@ const getSessionContext = (
   //   .filter((container: IContainer) => container.id === parseInt(sessionId, 10))
   //   .flatMap((container) => container.records);
 
-  const result = {};
+  const result: any = {};
 
   for (const containerRecord of container.records) {
     const context = getContextByRecord(contexts, `${containerRecord.id}`);
@@ -138,7 +152,7 @@ const getSessions = (
 ): Record<string, Session> => {
   const participantList = getParticipants(records);
   const contextList = getContexts(records);
-  const sessions = {};
+  const sessions: any = {};
   for (const container of containers) {
     const assetList = getAssets(volumeId, container);
     const session = getSession(
@@ -169,4 +183,97 @@ export const getVolume = (volume: IVolume | Error): Volume | Error => {
   };
 };
 
-export const buildOPF = (qa: OPF, qaLoc: OPF) => {};
+const buildOPF = (qa: OPF, qaTemplate: OPF, columns: string[]) => {
+  const playId = qa.column('PLAY_ID');
+
+  if (qaTemplate.column('PLAY_ID')) {
+    const column = qaTemplate.clearColumn('PLAY_ID');
+    column.addCells(playId.cells);
+  } else {
+    qaTemplate.addColumn('PLAY_ID', playId);
+  }
+
+  const missingChild = qa.column('missing_child');
+
+  if (qaTemplate.column('missing_child')) {
+    const column = qaTemplate.clearColumn('missing_child');
+    column.addCells(missingChild.cells);
+  } else {
+    qaTemplate.addColumn('missing_child', missingChild);
+  }
+
+  columns.forEach((col) => {
+    const column = qaTemplate.column(col);
+    if (!column.cells.length) {
+      column.addCell(
+        new Cell(
+          `(${Array(column.codes.length).fill('').join(',')})`,
+          playId.cell(0).onset,
+          playId.cell(0).offset
+        )
+      );
+    } else {
+      column.cells.forEach((cell) => {
+        cell.onset = playId.cell(0).onset;
+        cell.offset = playId.cell(0).offset;
+      });
+    }
+  });
+
+  return qaTemplate;
+};
+
+export const STUDY_MAP: Record<Study, Record<StudyKeys, StudyFunctions>> = {
+  EMO: {
+    build: (qaOPF: OPF, template: OPF) =>
+      buildOPF(qaOPF, template, ['emo_id_child', 'emo_id_mom']),
+    download: async (
+      filePath: string,
+      fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_EMO
+    ) => {
+      await downloadFilePromise(fileId, filePath);
+    },
+    resolveFilePath: (filePath: ParsedPath) => {
+      return resolve(filePath.dir, `${filePath.name}-emo.${filePath.ext}`);
+    },
+  },
+  LOC: {
+    build: (qaOPF: OPF, template: OPF) =>
+      buildOPF(qaOPF, template, ['loc_id_child', 'loc_id_mom']),
+    download: async (
+      filePath: string,
+      fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_LOC
+    ) => {
+      await downloadFilePromise(fileId, filePath);
+    },
+    resolveFilePath: (filePath: ParsedPath) => {
+      return resolve(filePath.dir, `${filePath.name}-loc.${filePath.ext}`);
+    },
+  },
+  OBJ: {
+    build: (qaOPF: OPF, template: OPF) =>
+      buildOPF(qaOPF, template, ['obj_id_child', 'obj_id_mom']),
+    download: async (
+      filePath: string,
+      fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_OBJ
+    ) => {
+      await downloadFilePromise(fileId, filePath);
+    },
+    resolveFilePath: (filePath: ParsedPath) => {
+      return resolve(filePath.dir, `${filePath.name}-obj.${filePath.ext}`);
+    },
+  },
+  TRA: {
+    build: (qaOPF: OPF, template: OPF) =>
+      buildOPF(qaOPF, template, ['transc_id']),
+    download: async (
+      filePath: string,
+      fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_TRA
+    ) => {
+      await downloadFilePromise(fileId, filePath);
+    },
+    resolveFilePath: (filePath: ParsedPath) => {
+      return resolve(filePath.dir, `${filePath.name}-tra.${filePath.ext}`);
+    },
+  },
+};

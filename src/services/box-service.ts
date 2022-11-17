@@ -4,9 +4,8 @@ import os from 'os';
 import querystring from 'querystring';
 import keytar from 'keytar';
 import { createWriteStream, createReadStream } from 'fs';
+import BoxSDK from 'box-node-sdk';
 import envVariables from '../../env.json';
-
-const BoxSDK = require('box-node-sdk');
 
 const { BOX_CLIENT_ID, BOX_CLIENT_SECRET, BOX_REDIRECT_URI } = envVariables;
 

@@ -1,3 +1,6 @@
+import { ParsedPath } from 'path';
+import { OPF } from './OPF';
+
 export type Session = {
   date: string;
   id: string;
@@ -107,8 +110,20 @@ export type Play = {
   box: Box;
 };
 
+export type StudyBuildFunction = (qaOPF: OPF, template: OPF) => OPF;
+export type StudyDownloadFunction = (
+  filePath: string,
+  fileId?: string
+) => Promise<void>;
+export type StudyFileNameFunction = (filePath: ParsedPath) => string;
+
 export type QA = 'FAILED' | 'PASSED' | 'UNKNOWN';
 export type Study = 'EMO' | 'TRA' | 'OBJ' | 'LOC';
+export type StudyKeys = 'build' | 'download' | 'resolveFilePath';
+export type StudyFunctions =
+  | StudyBuildFunction
+  | StudyDownloadFunction
+  | StudyFileNameFunction;
 
 export type DownloadProgress = `downloadProgress-${string}`;
 type BoxUploadEvents =

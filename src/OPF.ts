@@ -6,7 +6,7 @@ import path from 'path';
 
 const DEFAULT_ONSET = '00:00:00:000';
 const DEFAULT_OFFSET = '00:00:00:000';
-const DEFAULT_VALUE = '';
+const DEFAULT_VALUE = '()';
 
 export class Cell {
   private _onset: string;
@@ -15,7 +15,11 @@ export class Cell {
 
   private _value: string;
 
-  constructor(onset: string, offset: string, value: string) {
+  constructor(
+    value = DEFAULT_VALUE,
+    onset = DEFAULT_ONSET,
+    offset = DEFAULT_OFFSET
+  ) {
     this._onset = onset;
     this._offset = offset;
     this._value = value;
@@ -25,8 +29,16 @@ export class Cell {
     return this._onset;
   }
 
+  public set onset(newOnset: string) {
+    this._onset = newOnset;
+  }
+
   public get offset() {
     return this._offset;
+  }
+
+  public set offset(newOffset: string) {
+    this._offset = newOffset;
   }
 
   public get value() {
@@ -34,20 +46,23 @@ export class Cell {
   }
 
   public toString = (): string => {
-    return `${this.onset},${this.offset},(${this.value})`;
+    return `${this.onset},${this.offset},${this.value}`;
   };
 }
 
 export class Column {
   private _name: string;
 
-  private _codes: string;
+  private _codes: string[];
+
+  private _columnType: string;
 
   private _cells: Cell[] = [];
 
   constructor(name: string, codes: string, cells: Cell[] = []) {
     this._name = name;
-    this._codes = codes;
+    this._columnType = codes.split('-')[0];
+    this._codes = codes.split('-')[1].split(',');
     this._cells = cells;
   }
 
@@ -63,6 +78,10 @@ export class Column {
     return this._cells;
   }
 
+  public set cells(newCells: Cell[]) {
+    this._cells = newCells;
+  }
+
   public cell = (cellIndex: number): Cell => {
     return this._cells[cellIndex];
   };
@@ -71,8 +90,14 @@ export class Column {
     this._cells.push(cell);
   };
 
+  public addCells = (cells: Cell[]) => {
+    this._cells.push(cells);
+  };
+
   public toString = (): string => {
-    const str: string[] = [`${this.name} ${this.codes}`];
+    const str: string[] = [
+      `${this.name} ${this._columnType}-${this.codes.join(',')}`,
+    ];
     str.push(...this.cells.map((cell) => cell.toString()));
 
     return str.join('\r\n');
@@ -95,25 +120,27 @@ export class OPF {
       if (content.startsWith('#')) continue;
 
       if (this.isColumn(content) && !currColumn) {
-        const [columnNmae, colDef] = content.split(' ');
-        currColumn = new Column(columnNmae, colDef);
+        const [columnName, colDef] = content.split(' ');
+        currColumn = new Column(columnName, colDef);
       } else if (this.isColumn(content) && currColumn) {
         columns.push(currColumn); // Save the current column
-        const [columnNmae, colDef] = content.split(' ');
-        currColumn = new Column(columnNmae, colDef);
-      } else if (!this.isColumn(content) && currColumn) {
+        const [columnName, colDef] = content.split(' ');
+        currColumn = new Column(columnName, colDef);
+      } else if (
+        !this.isColumn(content) &&
+        currColumn &&
+        content.split(',').length >= 3
+      ) {
         const [onset, offset, ...rest] = content.split(',');
-        currColumn.addCell(
-          new Cell(
-            onset || DEFAULT_ONSET,
-            offset || DEFAULT_OFFSET,
-            rest.join(',') || DEFAULT_VALUE
-          )
-        );
+        const values = rest ? `${rest.join(',')}` : DEFAULT_VALUE;
+
+        currColumn.addCell(new Cell(values, onset, offset));
       } else {
-        console.log('Cell', content);
+        console.log('Cell Not recorded', content);
       }
     }
+
+    if (currColumn) columns.push(currColumn);
 
     return columns;
   };
@@ -165,7 +192,7 @@ export class OPF {
   }
 
   static isColumn = (str: string): boolean => {
-    return str.split(' ').length > 1;
+    return str.split(' ').length > 1 && str.includes('|') && str.includes('-');
   };
 
   public get db() {
@@ -181,14 +208,33 @@ export class OPF {
   }
 
   public column = (name: string): Column => {
-    return this._columns[name.toLocaleLowerCase()];
+    const response = this._columns[name.toLocaleLowerCase()];
+
+    if (!response)
+      throw Error(`Cannot find column ${name} in OPF ${this.name} File`);
+
+    return response;
+  };
+
+  public clearColumn = (name: string): Column => {
+    const columnToClear = this.column(name);
+    columnToClear.cells = [];
+    return columnToClear;
   };
 
   public addColumn = (name: string, column: Column) => {
     if (name in this._columns)
-      throw Error(`Column ${name} already exists in the OPF file`);
+      throw Error(`Column ${name} already exists in the OPF ${this.name} file`);
 
     this._columns[name] = column;
+  };
+
+  public removeColumn = (name: string): Column => {
+    const columnToRemove = this.column(name);
+
+    delete this._columns[name];
+
+    return columnToRemove;
   };
 
   public toString = (): string => {

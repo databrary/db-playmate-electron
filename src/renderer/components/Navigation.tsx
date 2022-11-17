@@ -18,7 +18,7 @@ import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
 import MenuIcon from '@mui/icons-material/Menu';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import { drawerWidth } from '../../constants';
+import { drawerWidth } from '../constants';
 import DrawerHeader from './DrawerHeader';
 import DownloadMenu from './DownloadMenu';
 import { useAppSelector } from '../hooks/store';

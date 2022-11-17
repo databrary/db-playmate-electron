@@ -20,10 +20,9 @@ function Databrary({ navigate }: Props) {
   const [errorMessage, setErrorMessage] = useState(null);
   const [isFetching, setIsFetching] = useState(false);
 
-  const onDatabraryLogin = (e) => {
+  const onDatabraryLogin = (e: any) => {
     e.preventDefault();
     setIsFetching(true);
-    // eslint-disable-next-line promise/catch-or-return
     window.electron.ipcRenderer
       .invoke('databraryLogin', [{ email, password }])
       .then((_) => {

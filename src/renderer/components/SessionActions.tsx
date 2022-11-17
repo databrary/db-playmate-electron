@@ -32,7 +32,8 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
     window.electron.ipcRenderer
       .invoke('uploadFile', [folderId])
       .then((file) => {
-        enqueueSnackbar('File Uploaded', { variant: 'success' });
+        console.log('File Uploaded', file);
+        enqueueSnackbar(`File Uploaded`, { variant: 'success' });
       })
       .catch((error) =>
         enqueueSnackbar(`Error uploading QA File ${error.message}`, {
@@ -42,7 +43,7 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
   };
 
   const buildDatavyuTemplateName = (volumeId: string, sessionId: string) => {
-    return `PLAY_${volumeId}_${sessionId}`;
+    return `PLAY_${volumeId}_${sessionId}_qa`;
   };
 
   const handleUploadStartedEvent = (...args: unknown[]) => {
@@ -91,6 +92,7 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
     };
     window.electron.ipcRenderer.invoke('downloadOPF', [arg]);
   };
+
   return (
     <Box
       sx={{
