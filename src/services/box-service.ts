@@ -151,34 +151,22 @@ const uploadChunkFile = async (
   return uploader;
 };
 
-const downloadFile = async (fielId: string) => {
-  const response = await axiosInstance.get(`files/${fielId}/content`, {
-    responseType: 'stream',
-  });
-
-  return response;
-};
-
-const downloadFilePromise = async (
-  fileId: string,
+const downloadFile = async (
+  fielId: string,
   filePath: string
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
-    const stream = createWriteStream(filePath, {
-      autoClose: true,
-    });
+    client.files.getReadStream(fielId, null, (error: any, stream: any) => {
+      if (error) {
+        reject(error.message);
+      }
 
-    downloadFile(fileId)
-      .then((response) => {
-        const writer = response.data.pipe(stream);
-
-        writer.on('finish', () => {
-          resolve();
-        });
-      })
-      .catch((error) => {
-        reject();
+      const output = createWriteStream(filePath);
+      const writer = stream.pipe(output);
+      writer.on('finish', () => {
+        resolve();
       });
+    });
   });
 };
 
@@ -196,7 +184,7 @@ export {
   refreshTokens,
   uploadChunkFile,
   uploadFile,
-  downloadFilePromise,
+  downloadFile,
   ls,
   setClient,
   setBearer,

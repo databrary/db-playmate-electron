@@ -17,7 +17,7 @@ import {
   dialog,
   OpenDialogOptions,
 } from 'electron';
-import { statSync, createWriteStream } from 'fs';
+import { statSync, createWriteStream, readFileSync } from 'fs';
 import {
   Error,
   Progress,
@@ -43,7 +43,7 @@ import {
   downloadAsset,
 } from '../services/databrary-service';
 import {
-  downloadFilePromise,
+  downloadFile,
   ls,
   uploadChunkFile,
   uploadFile,
@@ -167,65 +167,112 @@ ipcMain.handle('downloadOPF', async (event, args: any[]) => {
   try {
     const filePaths = await showOpenDialog();
 
-    const promiseList: Promise<void>[] = [];
+    // const promiseList: Promise<void>[] = [];
     for (const template of args) {
       const localFilePath = path.resolve(
         filePaths[0],
         `${template.fileName}.opf`
       );
-      promiseList.push(
-        downloadFilePromise(BOX_MAP.QA_DATAVYU_TEMPLATE, localFilePath).then(
-          () => {
-            const qaOPF = OPF.readOPF(localFilePath);
-            const playId = [
-              `PLAY_${template.volumeId}_${template.sessionId}`,
-              new Date(template.birthdate).toLocaleDateString('en-US', {
-                timeZone: 'UTC',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-              }),
-              new Date(template.date).toLocaleDateString('en-US', {
-                timeZone: 'UTC',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-              }),
-              template.language && template.language.split(',')[0]
-                ? template.language.split(',')[0].trim().charAt(0).toLowerCase()
-                : '.',
-              template.language && template.language.split(',')[1]
-                ? template.language.split(',')[1].trim().charAt(0).toLowerCase()
-                : '.',
-            ];
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await downloadFile(BOX_MAP.QA_DATAVYU_TEMPLATE, localFilePath);
+        const qaOPF = OPF.readOPF(localFilePath);
+        const playId = [
+          `PLAY_${template.volumeId}_${template.sessionId}`,
+          new Date(template.birthdate).toLocaleDateString('en-US', {
+            timeZone: 'UTC',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          }),
+          new Date(template.date).toLocaleDateString('en-US', {
+            timeZone: 'UTC',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          }),
+          template.language && template.language.split(',')[0]
+            ? template.language.split(',')[0].trim().charAt(0).toLowerCase()
+            : '.',
+          template.language && template.language.split(',')[1]
+            ? template.language.split(',')[1].trim().charAt(0).toLowerCase()
+            : '.',
+        ];
 
-            qaOPF.clearColumn('PLAY_ID');
-            const playIdColumn = qaOPF.column('PLAY_ID');
-            playIdColumn.addCell(new Cell(`(${playId.join(',')})`));
+        qaOPF.clearColumn('PLAY_ID');
+        const playIdColumn = qaOPF.column('PLAY_ID');
+        playIdColumn.addCell(new Cell(`(${playId.join(',')})`));
 
-            const qaId = [
-              `${template.siteId}`,
-              `${template.id}`,
-              '',
-              '',
-              '',
-              '',
-              '',
-            ];
-            qaOPF.clearColumn('QA_ID');
-            const qaIdColumn = qaOPF.column('QA_ID');
-            qaIdColumn.addCell(new Cell(`(${qaId.join(',')})`));
-            OPF.writeOPF(localFilePath, qaOPF);
-          }
-        )
-      );
+        const qaId = [
+          `${template.siteId}`,
+          `${template.id}`,
+          '',
+          '',
+          '',
+          '',
+          '',
+        ];
+        qaOPF.clearColumn('QA_ID');
+        const qaIdColumn = qaOPF.column('QA_ID');
+        qaIdColumn.addCell(new Cell(`(${qaId.join(',')})`));
+        OPF.writeOPF(localFilePath, qaOPF);
+
+        onEvent('downloadedOPF', []);
+      } catch (error) {
+        console.error('An error occured while downloading Files', error);
+      }
+
+      // promiseList.push(
+      //   downloadFile(BOX_MAP.QA_DATAVYU_TEMPLATE, localFilePath).then(() => {
+      //     const qaOPF = OPF.readOPF(localFilePath);
+      //     const playId = [
+      //       `PLAY_${template.volumeId}_${template.sessionId}`,
+      //       new Date(template.birthdate).toLocaleDateString('en-US', {
+      //         timeZone: 'UTC',
+      //         year: 'numeric',
+      //         month: '2-digit',
+      //         day: '2-digit',
+      //       }),
+      //       new Date(template.date).toLocaleDateString('en-US', {
+      //         timeZone: 'UTC',
+      //         year: 'numeric',
+      //         month: '2-digit',
+      //         day: '2-digit',
+      //       }),
+      //       template.language && template.language.split(',')[0]
+      //         ? template.language.split(',')[0].trim().charAt(0).toLowerCase()
+      //         : '.',
+      //       template.language && template.language.split(',')[1]
+      //         ? template.language.split(',')[1].trim().charAt(0).toLowerCase()
+      //         : '.',
+      //     ];
+
+      //     qaOPF.clearColumn('PLAY_ID');
+      //     const playIdColumn = qaOPF.column('PLAY_ID');
+      //     playIdColumn.addCell(new Cell(`(${playId.join(',')})`));
+
+      //     const qaId = [
+      //       `${template.siteId}`,
+      //       `${template.id}`,
+      //       '',
+      //       '',
+      //       '',
+      //       '',
+      //       '',
+      //     ];
+      //     qaOPF.clearColumn('QA_ID');
+      //     const qaIdColumn = qaOPF.column('QA_ID');
+      //     qaIdColumn.addCell(new Cell(`(${qaId.join(',')})`));
+      //     OPF.writeOPF(localFilePath, qaOPF);
+      //   })
+      // );
     }
 
-    Promise.all(promiseList)
-      .then((response) => onEvent('downloadedOPF', []))
-      .catch((error) => {
-        console.error('An error occured while downloading Files', error);
-      });
+    // Promise.all(promiseList)
+    //   .then((response) => onEvent('downloadedOPF', []))
+    //   .catch((error) => {
+    //     console.error('An error occured while downloading Files', error);
+    //   });
   } catch (error) {
     console.log('Error while downloading box file', error);
   }
@@ -390,7 +437,14 @@ const getQAFailed = async (folderId = BOX_MAP.QA_FAILED) => {
 
 ipcMain.handle('loadData', async (event, args) => {
   if (!getCookies()) throw Error('You must be logged into Databrary');
-  const volumes = await getVolumes(args);
+
+  const volumesPath = path.resolve(app.getAppPath(), 'volumes.json');
+  await downloadFile(BOX_MAP.VOLUMES, volumesPath);
+  const volumesList = JSON.parse(
+    readFileSync(volumesPath, { encoding: 'utf-8' })
+  );
+
+  const volumes = await getVolumes(volumesList);
   const videos = await getBoxVideos();
   const passed = await getQAPassed();
   const failed = await getQAFailed();

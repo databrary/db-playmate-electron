@@ -3,7 +3,6 @@ import { styled } from '@mui/material/styles';
 import { Backdrop, Box, CircularProgress, Typography } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import Volume from './Volume';
-import volumes from '../../volumes.json';
 import Navigation from './Navigation';
 import { drawerWidth } from '../constants';
 import DrawerHeader from './DrawerHeader';
@@ -35,7 +34,6 @@ const Dashboard = () => {
   const { enqueueSnackbar } = useSnackbar();
 
   const dispatch = useAppDispatch();
-  const [volumeList, setVolumeList] = useState<string[]>([]);
   const [isFetcching, setIsFetching] = useState(false);
   const [selectedVolume, setSelectedVolume] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -49,10 +47,10 @@ const Dashboard = () => {
     enqueueSnackbar(`QA File Downloaded!`, { variant: 'success' });
   };
 
-  const loadData = (volumeList: string[]) => {
+  const loadData = () => {
     setIsFetching(true);
     window.electron.ipcRenderer
-      .invoke<string, Play>('loadData', [...volumeList])
+      .invoke<string, Play>('loadData', [])
       .then(({ databrary: { volumes }, box: { videos, passed, failed } }) => {
         dispatch(addVolumes(volumes || {}));
         dispatch(addVideos(videos || []));
@@ -68,15 +66,14 @@ const Dashboard = () => {
   useEffect(() => {
     window.electron.ipcRenderer.on('status', handleEvent);
     window.electron.ipcRenderer.on('downloadedOPF', handleDownloadOPF);
-    setVolumeList(volumes);
   }, []);
 
   useEffect(() => {
-    loadData(volumeList || []);
-  }, [volumeList]);
+    loadData();
+  }, []);
 
   const onRefresh = () => {
-    loadData(volumeList || []);
+    loadData();
   };
 
   const onDrawerClick = (open: boolean) => {

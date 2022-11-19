@@ -4,6 +4,8 @@ logs
 env.json
 release/**
 
+volumes.json
+
 # Runtime data
 pids
 *.pid

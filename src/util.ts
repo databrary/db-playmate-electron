@@ -12,7 +12,7 @@ import {
 } from './types';
 import { IContainer, IRecord, IVolume } from './interfaces';
 import { Cell, OPF } from './OPF';
-import { downloadFilePromise } from './services/box-service';
+import { downloadFile } from './services/box-service';
 import { BOX_MAP } from './constants';
 
 const getContexts = (recordList: IRecord[]): Context[] => {
@@ -231,7 +231,7 @@ export const STUDY_MAP: Record<Study, Record<StudyKeys, StudyFunctions>> = {
       filePath: string,
       fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_EMO
     ) => {
-      await downloadFilePromise(fileId, filePath);
+      await downloadFile(fileId, filePath);
     },
     resolveFilePath: (filePath: ParsedPath) => {
       return resolve(filePath.dir, `${filePath.name}-emo.${filePath.ext}`);
@@ -244,7 +244,7 @@ export const STUDY_MAP: Record<Study, Record<StudyKeys, StudyFunctions>> = {
       filePath: string,
       fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_LOC
     ) => {
-      await downloadFilePromise(fileId, filePath);
+      await downloadFile(fileId, filePath);
     },
     resolveFilePath: (filePath: ParsedPath) => {
       return resolve(filePath.dir, `${filePath.name}-loc.${filePath.ext}`);
@@ -257,7 +257,7 @@ export const STUDY_MAP: Record<Study, Record<StudyKeys, StudyFunctions>> = {
       filePath: string,
       fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_OBJ
     ) => {
-      await downloadFilePromise(fileId, filePath);
+      await downloadFile(fileId, filePath);
     },
     resolveFilePath: (filePath: ParsedPath) => {
       return resolve(filePath.dir, `${filePath.name}-obj.${filePath.ext}`);
@@ -270,7 +270,7 @@ export const STUDY_MAP: Record<Study, Record<StudyKeys, StudyFunctions>> = {
       filePath: string,
       fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_TRA
     ) => {
-      await downloadFilePromise(fileId, filePath);
+      await downloadFile(fileId, filePath);
     },
     resolveFilePath: (filePath: ParsedPath) => {
       return resolve(filePath.dir, `${filePath.name}-tra.${filePath.ext}`);
