@@ -1,4 +1,4 @@
-import { Session } from './types';
+import { Session, Volume } from './types';
 
 export const BOX_MAP = {
   VOLUMES: '1069201657029',
@@ -68,4 +68,27 @@ export const PLAY_SESSION_NAME_CHECKS = {
       session.name?.split('_').length > 2 &&
       session.name.split('_')[2] in session.participants,
   },
+};
+
+export const defaultVolume: Volume = {
+  access: [],
+  body: '',
+  citation: undefined,
+  comments: [],
+  creation: '',
+  doi: '',
+  excerpts: [],
+  funding: [],
+  id: '',
+  links: [],
+  metrics: [],
+  name: '',
+  permission: 0,
+  publicaccess: undefined,
+  publicsharefull: undefined,
+  state: undefined,
+  tags: [],
+  top: undefined,
+  sessions: {},
+  owners: [],
 };

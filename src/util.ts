@@ -1,7 +1,6 @@
 import { ParsedPath, resolve } from 'path';
 import {
   Context,
-  Error,
   Volume,
   Session,
   Participant,
@@ -168,7 +167,7 @@ const getSessions = (
   return sessions;
 };
 
-export const getVolume = (volume: IVolume | Error): Volume | Error => {
+export const getVolume = (volume: IVolume): Volume => {
   const { containers, records, id, ...rest } = volume as IVolume;
   const sessions = getSessions(
     `${(volume as IVolume).id}`,

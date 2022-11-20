@@ -32,7 +32,6 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
     window.electron.ipcRenderer
       .invoke('uploadFile', [folderId])
       .then((file) => {
-        console.log('File Uploaded', file);
         enqueueSnackbar(`File Uploaded`, { variant: 'success' });
       })
       .catch((error) =>

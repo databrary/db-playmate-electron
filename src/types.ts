@@ -39,12 +39,6 @@ export type Owner = {
   name: string;
 };
 
-export type Error = {
-  id: string;
-  status: string;
-  message: string;
-};
-
 export type Asset = {
   assetId: string;
   assetName: string;
@@ -95,7 +89,7 @@ export type Progress = {
 };
 
 export type Databrary = {
-  volumes: Record<string, Volume | Error>;
+  volumes: Record<string, Volume>;
   downloads: Record<string, Progress>;
 };
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import {
   Toolbar,
@@ -13,6 +13,9 @@ import {
   CssBaseline,
   Box,
   Tooltip,
+  FormLabel,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -24,6 +27,10 @@ import DownloadMenu from './DownloadMenu';
 import { useAppSelector } from '../hooks/store';
 import { RootState } from '../store/store';
 import { Volume } from '../../types';
+
+type LocalVolume = Volume & {
+  site: string | undefined;
+};
 
 type Props = {
   open: boolean;
@@ -61,8 +68,67 @@ const Navigation = ({
 }: Props) => {
   const volumes = useAppSelector((state: RootState) => state.databrary.volumes);
 
-  const onClick = (volume) => {
-    if (onVolumeClick) onVolumeClick(volume);
+  const [localVolumes, setLocalVolumes] = useState<LocalVolume[]>([]);
+  const [sortBy, setSortBy] = useState('volume');
+
+  useEffect(() => {
+    setLocalVolumes(
+      Object.values(volumes).map((volume) => ({
+        ...volume,
+        site: (volume as Volume).name
+          ? (volume as Volume).name.split('_')[1]
+          : undefined,
+      }))
+    );
+  }, [volumes]);
+
+  const onSortBy = (
+    event: React.MouseEvent<HTMLElement>,
+    newSortBy: string | null
+  ) => {
+    if (newSortBy !== null) {
+      setSortBy(newSortBy);
+    }
+  };
+
+  const onSortByVolume = () => {
+    const sortedArray = localVolumes.sort((volumeA: any, volumeB: any) => {
+      return volumeA.id - volumeB.id;
+    });
+
+    setLocalVolumes([...sortedArray]);
+  };
+
+  const onSortBySite = () => {
+    const sortedArray = localVolumes.sort(
+      (volumeA: LocalVolume, volumeB: LocalVolume) => {
+        const a = volumeA.name.toUpperCase();
+        const b = volumeB.name.toUpperCase();
+        if (a < b) {
+          return -1;
+        }
+
+        if (a > b) {
+          return 1;
+        }
+
+        // names must be equal
+        return 0;
+      }
+    );
+    setLocalVolumes([...sortedArray]);
+  };
+
+  useEffect(() => {
+    if (sortBy === 'volume') {
+      onSortByVolume();
+    } else if (sortBy === 'site') {
+      onSortBySite();
+    }
+  }, [sortBy]);
+
+  const onClick = (volumeId: string) => {
+    if (onVolumeClick) onVolumeClick(volumeId);
   };
 
   const onOpenDrawer = () => {
@@ -139,8 +205,31 @@ const Navigation = ({
           </IconButton>
         </DrawerHeader>
         <Divider />
+        <Box
+          sx={{
+            mx: 2,
+            my: 1,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <FormLabel>Sort by:</FormLabel>
+          <ToggleButtonGroup
+            color="primary"
+            value={sortBy}
+            exclusive
+            onChange={onSortBy}
+            aria-label="text alignment"
+            size="small"
+          >
+            <ToggleButton value="volume">Volume</ToggleButton>
+            <ToggleButton value="site">Site</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+        <Divider />
         <List>
-          {(Object.values(volumes) || []).map((volume) => (
+          {localVolumes.map((volume: LocalVolume) => (
             <Box key={volume.id}>
               <ListItem disablePadding>
                 <ListItemButton>

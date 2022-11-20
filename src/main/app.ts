@@ -19,7 +19,6 @@ import {
 } from 'electron';
 import { statSync, createWriteStream, readFileSync } from 'fs';
 import {
-  Error,
   Progress,
   Volume,
   Channels,
@@ -48,8 +47,8 @@ import {
   uploadChunkFile,
   uploadFile,
 } from '../services/box-service';
-import { BOX_MAP } from '../constants';
-import { Cell, Column, OPF } from '../OPF';
+import { BOX_MAP, defaultVolume } from '../constants';
+import { Cell, OPF } from '../OPF';
 import envVariables from '../../env.json';
 
 let appWindow: BrowserWindow | null = null;
@@ -167,7 +166,6 @@ ipcMain.handle('downloadOPF', async (event, args: any[]) => {
   try {
     const filePaths = await showOpenDialog();
 
-    // const promiseList: Promise<void>[] = [];
     for (const template of args) {
       const localFilePath = path.resolve(
         filePaths[0],
@@ -221,58 +219,7 @@ ipcMain.handle('downloadOPF', async (event, args: any[]) => {
       } catch (error) {
         console.error('An error occured while downloading Files', error);
       }
-
-      // promiseList.push(
-      //   downloadFile(BOX_MAP.QA_DATAVYU_TEMPLATE, localFilePath).then(() => {
-      //     const qaOPF = OPF.readOPF(localFilePath);
-      //     const playId = [
-      //       `PLAY_${template.volumeId}_${template.sessionId}`,
-      //       new Date(template.birthdate).toLocaleDateString('en-US', {
-      //         timeZone: 'UTC',
-      //         year: 'numeric',
-      //         month: '2-digit',
-      //         day: '2-digit',
-      //       }),
-      //       new Date(template.date).toLocaleDateString('en-US', {
-      //         timeZone: 'UTC',
-      //         year: 'numeric',
-      //         month: '2-digit',
-      //         day: '2-digit',
-      //       }),
-      //       template.language && template.language.split(',')[0]
-      //         ? template.language.split(',')[0].trim().charAt(0).toLowerCase()
-      //         : '.',
-      //       template.language && template.language.split(',')[1]
-      //         ? template.language.split(',')[1].trim().charAt(0).toLowerCase()
-      //         : '.',
-      //     ];
-
-      //     qaOPF.clearColumn('PLAY_ID');
-      //     const playIdColumn = qaOPF.column('PLAY_ID');
-      //     playIdColumn.addCell(new Cell(`(${playId.join(',')})`));
-
-      //     const qaId = [
-      //       `${template.siteId}`,
-      //       `${template.id}`,
-      //       '',
-      //       '',
-      //       '',
-      //       '',
-      //       '',
-      //     ];
-      //     qaOPF.clearColumn('QA_ID');
-      //     const qaIdColumn = qaOPF.column('QA_ID');
-      //     qaIdColumn.addCell(new Cell(`(${qaId.join(',')})`));
-      //     OPF.writeOPF(localFilePath, qaOPF);
-      //   })
-      // );
     }
-
-    // Promise.all(promiseList)
-    //   .then((response) => onEvent('downloadedOPF', []))
-    //   .catch((error) => {
-    //     console.error('An error occured while downloading Files', error);
-    //   });
   } catch (error) {
     console.log('Error while downloading box file', error);
   }
@@ -376,7 +323,7 @@ ipcMain.handle('downloadAssets', async (event, args: any[]) => {
 });
 
 const getVolumes = async (volumes: string[]) => {
-  const volumesMap: Record<string, Volume | Error> = {};
+  const volumesMap: Record<string, Volume> = {};
   for (const volumeId of volumes) {
     try {
       onEvent('status', `Fetching Volume ${volumeId} data...`);
@@ -388,9 +335,8 @@ const getVolumes = async (volumes: string[]) => {
 
       onEvent('status', `Error while fetching Volume ${volumeId} data...`);
       volumesMap[volumeId] = {
+        ...defaultVolume,
         id: volumeId,
-        status: `400`,
-        message: `Error while fetching volume ${volumeId}`,
       };
     }
   }
