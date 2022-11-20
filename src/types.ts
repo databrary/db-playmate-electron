@@ -77,6 +77,20 @@ export type BoxEntry = {
   };
 };
 
+export type PersonPrgress = {
+  folderId: string | undefined;
+  volumes: BoxEntry[];
+};
+
+export type Person = {
+  type: Study;
+  name: string | undefined;
+  folderId: string;
+  toDo: PersonPrgress;
+  inProgress: PersonPrgress;
+  done: PersonPrgress;
+};
+
 export type Status = 'STARTED' | 'PROGRESS' | 'ERRORED' | 'DONE' | undefined;
 
 export type Progress = {
@@ -97,6 +111,7 @@ export type Box = {
   videos: BoxEntry[];
   passed: BoxEntry[];
   failed: BoxEntry[];
+  transcribers: string[];
 };
 
 export type Play = {

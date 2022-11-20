@@ -3,7 +3,7 @@ import { URL } from 'url';
 import path from 'path';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
-import { Context, Error, Volume, Session, Participant, Asset } from '../types';
+import { Context, Volume, Session, Participant, Asset } from '../types';
 import { IContainer, IRecord, IVolume } from '../interfaces';
 
 export let resolveHtmlPath: (htmlFileName: string) => string;
@@ -96,11 +96,7 @@ const getSessionContext = (
   container: IContainer,
   contexts: Context[]
 ): Record<string, Context> => {
-  // const containerRecordList = (volumeInfo.containers || [])
-  //   .filter((container: IContainer) => container.id === parseInt(sessionId, 10))
-  //   .flatMap((container) => container.records);
-
-  const result = {};
+  const result: Record<string, Context> = {};
 
   for (const containerRecord of container.records) {
     const context = getContextByRecord(contexts, `${containerRecord.id}`);
@@ -185,7 +181,7 @@ const getSessions = (
 ): Record<string, Session> => {
   const participantList = getParticipants(records);
   const contextList = getContexts(records);
-  const sessions = {};
+  const sessions: Record<string, Session> = {};
   for (const container of containers) {
     const assetList = getAssets(volumeId, container);
     const session = getSession(
@@ -201,7 +197,7 @@ const getSessions = (
   return sessions;
 };
 
-export const getVolume = (volume: IVolume | Error): Volume | Error => {
+export const getVolume = (volume: IVolume): Volume => {
   const { containers, records, id, ...rest } = volume as IVolume;
   const sessions = getSessions(
     `${(volume as IVolume).id}`,

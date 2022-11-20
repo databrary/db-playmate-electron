@@ -1,5 +1,4 @@
 import { ParsedPath, resolve } from 'path';
-import { createWriteStream } from 'fs';
 import {
   Context,
   Volume,
@@ -63,10 +62,6 @@ const getSessionContext = (
   container: IContainer,
   contexts: Context[]
 ): Record<string, Context> => {
-  // const containerRecordList = (volumeInfo.containers || [])
-  //   .filter((container: IContainer) => container.id === parseInt(sessionId, 10))
-  //   .flatMap((container) => container.records);
-
   const result: any = {};
 
   for (const containerRecord of container.records) {
@@ -84,10 +79,6 @@ const getSessionParticipant = (
   container: IContainer,
   participants: Participant[]
 ): Record<string, Participant> => {
-  // const containerRecordList = (volumeInfo.containers || [])
-  //   .filter((container: IContainer) => container.id === parseInt(sessionId, 10))
-  //   .flatMap((container) => container.records);
-
   for (const containerRecord of container.records) {
     const participant = getParticipantByRecord(
       participants,

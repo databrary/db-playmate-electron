@@ -25,6 +25,8 @@ import {
   StudyDownloadFunction,
   StudyBuildFunction,
   StudyFileNameFunction,
+  Person,
+  PersonPrgress,
 } from '../types';
 import MenuBuilder from './menu';
 import { getVolume, STUDY_MAP } from '../util';
@@ -370,6 +372,65 @@ const getQAPassed = async (folderId = BOX_MAP.QA_PASSED) => {
   return [];
 };
 
+const getTranscribers = async (
+  folderId = BOX_MAP.TRANSCRIBERS
+): Promise<Person[]> => {
+  try {
+    onEvent('status', 'Fetching Transcribers list...');
+    const transcribers: Person[] = [];
+    const entries = await ls(folderId);
+    for (const entry of entries) {
+      if (entry.name.toLocaleLowerCase().includes('inactive')) continue;
+
+      // eslint-disable-next-line no-await-in-loop
+      const transcriberFolders = await ls(`${entry.id}`);
+      const toDo: PersonPrgress = {
+        folderId: undefined,
+        volumes: [],
+      };
+      const inProgress: PersonPrgress = {
+        folderId: undefined,
+        volumes: [],
+      };
+      const done: PersonPrgress = {
+        folderId: undefined,
+        volumes: [],
+      };
+
+      for (const folder of transcriberFolders) {
+        // eslint-disable-next-line no-await-in-loop
+        if (folder.name === '1_ToBeCoded_DownloadOnly') {
+          toDo.folderId = `${folder.id}`;
+          // eslint-disable-next-line no-await-in-loop
+          toDo.volumes = await ls(toDo.folderId);
+        } else if (folder.name === '2_InProgress') {
+          inProgress.folderId = `${folder.id}`;
+          // eslint-disable-next-line no-await-in-loop
+          inProgress.volumes = await ls(inProgress.folderId);
+        } else if (folder.name === '3_Submitted_CannotEditAnymore') {
+          done.folderId = `${folder.id}`;
+          // eslint-disable-next-line no-await-in-loop
+          done.volumes = await ls(done.folderId);
+        }
+      }
+
+      transcribers.push({
+        type: 'TRA',
+        name: entry.name.split('_').at(-1),
+        folderId: `${entry.id}`,
+        toDo,
+        inProgress,
+        done,
+      });
+    }
+    return transcribers;
+  } catch (error) {
+    console.log('getTranscribers - Error', (error as any).message);
+    onEvent('status', 'Error Fetching Transcribers list...');
+  }
+  return [];
+};
+
 const getQAFailed = async (folderId = BOX_MAP.QA_FAILED) => {
   try {
     onEvent('status', 'Fetching Failed QA...');
@@ -392,6 +453,7 @@ ipcMain.handle('loadData', async (event, args) => {
   const videos = await getBoxVideos();
   const passed = await getQAPassed();
   const failed = await getQAFailed();
+  const transcribers = await getTranscribers();
 
   return {
     databrary: { volumes },
@@ -399,6 +461,7 @@ ipcMain.handle('loadData', async (event, args) => {
       videos,
       passed,
       failed,
+      transcribers,
     },
   };
 });

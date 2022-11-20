@@ -7,6 +7,7 @@ const initialState: Box = {
   videos: [],
   passed: [],
   failed: [],
+  transcribers: [],
 };
 
 export const boxSlice = createSlice({
@@ -21,6 +22,9 @@ export const boxSlice = createSlice({
     },
     addFailed: (state, action: PayloadAction<BoxEntry[]>) => {
       state.failed = action.payload;
+    },
+    addTranscribers: (state, action: PayloadAction<string[]>) => {
+      state.transcribers = action.payload;
     },
   },
 });
@@ -48,5 +52,6 @@ export const isVideoInBox = createSelector(
   }
 );
 
-export const { addVideos, addPassed, addFailed } = boxSlice.actions;
+export const { addVideos, addPassed, addFailed, addTranscribers } =
+  boxSlice.actions;
 export default boxSlice.reducer;

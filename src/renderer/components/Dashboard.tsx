@@ -8,7 +8,12 @@ import { drawerWidth } from '../constants';
 import DrawerHeader from './DrawerHeader';
 import { useAppDispatch } from '../hooks/store';
 import { addVolumes } from '../slices/databrary';
-import { addVideos, addFailed, addPassed } from '../slices/box';
+import {
+  addVideos,
+  addFailed,
+  addPassed,
+  addTranscribers,
+} from '../slices/box';
 import { Play } from '../../types';
 
 const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })<{
@@ -51,12 +56,18 @@ const Dashboard = () => {
     setIsFetching(true);
     window.electron.ipcRenderer
       .invoke<string, Play>('loadData', [])
-      .then(({ databrary: { volumes }, box: { videos, passed, failed } }) => {
-        dispatch(addVolumes(volumes || {}));
-        dispatch(addVideos(videos || []));
-        dispatch(addPassed(passed || []));
-        dispatch(addFailed(failed || []));
-      })
+      .then(
+        ({
+          databrary: { volumes },
+          box: { videos, passed, failed, transcribers },
+        }) => {
+          dispatch(addVolumes(volumes || {}));
+          dispatch(addVideos(videos || []));
+          dispatch(addPassed(passed || []));
+          dispatch(addFailed(failed || []));
+          dispatch(addTranscribers(transcribers || []));
+        }
+      )
       .finally(() => {
         setStatus('');
         setIsFetching(false);

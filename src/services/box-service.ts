@@ -5,6 +5,7 @@ import querystring from 'querystring';
 import keytar from 'keytar';
 import { createReadStream, createWriteStream } from 'fs';
 import BoxSDK from 'box-node-sdk';
+import { BoxEntry } from 'types';
 import envVariables from '../../env.json';
 
 const { BOX_CLIENT_ID, BOX_CLIENT_SECRET, BOX_REDIRECT_URI } = envVariables;
@@ -185,7 +186,7 @@ const downloadBuffer = async (fielId: string): Promise<any> => {
   });
 };
 
-const ls = async (folderId: string) => {
+const ls = async (folderId: string): Promise<BoxEntry[]> => {
   const items = await client.folders.getItems(folderId);
   return items.entries || [];
 };

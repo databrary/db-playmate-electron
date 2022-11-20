@@ -21,9 +21,14 @@ type Props = {
 const SessionActions = ({ session, volumeId, volumeName }: Props) => {
   const { enqueueSnackbar } = useSnackbar();
 
-  const isVideoLreadyUploaded = useAppSelector((state: RootState) =>
+  const isVideoAlreadyUploaded = useAppSelector((state: RootState) =>
     isVideoInBox(state, session.id)
   );
+
+  const transcriberList = useAppSelector(
+    (state: RootState) => state.box.transcribers
+  );
+
   const [isUploadStarted, setIsUploadStarted] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploadDone, setIsUploadDone] = useState(false);
@@ -142,7 +147,7 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
       {(!isUploadStarted || isUploadDone) && (
         <Tooltip
           title={
-            isVideoLreadyUploaded || isUploadDone
+            isVideoAlreadyUploaded || isUploadDone
               ? TOOLTIP_MESSAGES.BOX_VIDEO_ALREADY_UPLOADED
               : TOOLTIP_MESSAGES.BOX_VIDEO_UPLOAD
           }
@@ -152,7 +157,7 @@ const SessionActions = ({ session, volumeId, volumeName }: Props) => {
             <IconButton
               aria-label="upload-video"
               onClick={onUploadVideo}
-              disabled={isVideoLreadyUploaded || isUploadDone}
+              disabled={isVideoAlreadyUploaded || isUploadDone}
             >
               <UploadIcon />
             </IconButton>
