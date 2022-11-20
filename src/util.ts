@@ -1,4 +1,5 @@
 import { ParsedPath, resolve } from 'path';
+import { createWriteStream } from 'fs';
 import {
   Context,
   Volume,

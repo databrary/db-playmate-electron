@@ -17,7 +17,7 @@ import {
   dialog,
   OpenDialogOptions,
 } from 'electron';
-import { statSync, createWriteStream, readFileSync } from 'fs';
+import { statSync, createWriteStream } from 'fs';
 import {
   Progress,
   Volume,
@@ -43,6 +43,7 @@ import {
 } from '../services/databrary-service';
 import {
   downloadFile,
+  downloadBuffer,
   ls,
   uploadChunkFile,
   uploadFile,
@@ -384,11 +385,8 @@ const getQAFailed = async (folderId = BOX_MAP.QA_FAILED) => {
 ipcMain.handle('loadData', async (event, args) => {
   if (!getCookies()) throw Error('You must be logged into Databrary');
 
-  const volumesPath = path.resolve(app.getAppPath(), 'volumes.json');
-  await downloadFile(BOX_MAP.VOLUMES, volumesPath);
-  const volumesList = JSON.parse(
-    readFileSync(volumesPath, { encoding: 'utf-8' })
-  );
+  const buffer = await downloadBuffer(BOX_MAP.VOLUMES);
+  const volumesList = JSON.parse(buffer.toString('utf8'));
 
   const volumes = await getVolumes(volumesList);
   const videos = await getBoxVideos();

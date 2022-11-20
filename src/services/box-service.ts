@@ -3,7 +3,7 @@ import url from 'url';
 import os from 'os';
 import querystring from 'querystring';
 import keytar from 'keytar';
-import { createWriteStream, createReadStream } from 'fs';
+import { createReadStream, createWriteStream } from 'fs';
 import BoxSDK from 'box-node-sdk';
 import envVariables from '../../env.json';
 
@@ -170,6 +170,21 @@ const downloadFile = async (
   });
 };
 
+const downloadBuffer = async (fielId: string): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    client.files.getReadStream(fielId, null, (error: any, stream: any) => {
+      if (error) {
+        reject(error.message);
+      }
+
+      const chunks: any[] = [];
+      stream.on('data', (chunk: any) => chunks.push(Buffer.from(chunk)));
+      stream.on('error', (err: any) => reject(err));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+  });
+};
+
 const ls = async (folderId: string) => {
   const items = await client.folders.getItems(folderId);
   return items.entries || [];
@@ -185,6 +200,7 @@ export {
   uploadChunkFile,
   uploadFile,
   downloadFile,
+  downloadBuffer,
   ls,
   setClient,
   setBearer,
