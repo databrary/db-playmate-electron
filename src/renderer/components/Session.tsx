@@ -38,6 +38,7 @@ const Session = ({ session, volumeId, volumeName }: Props) => {
         expandIcon={<ExpandMoreIcon />}
         aria-controls="panel1a-content"
         id="panel1a-header"
+        disabled={Object.values(assetMap).length === 0}
       >
         <SessionSummary volumeId={volumeId} status={status} session={session} />
       </AccordionSummary>
