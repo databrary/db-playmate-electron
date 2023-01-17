@@ -1,4 +1,5 @@
-import { ParsedPath, resolve } from 'path';
+import { ParsedPath, resolve, parse } from 'path';
+import { createWriteStream } from 'fs';
 import {
   Context,
   Volume,
@@ -7,12 +8,16 @@ import {
   Asset,
   Study,
   StudyFunctions,
-  StudyKeys,
+  Channels,
+  Progress,
+  EntityProgress,
+  Entity,
 } from './types';
 import { IContainer, IRecord, IVolume } from './interfaces';
 import { Cell, OPF } from './OPF';
-import { downloadFile } from './services/box-service';
-import { BOX_MAP } from './constants';
+import { downloadBuffer, ls } from './services/box-service';
+import { BOX_MAP, defaultVolume } from './constants';
+import { downloadAsset, getVolumeInfo } from './services/databrary-service';
 
 const getContexts = (recordList: IRecord[]): Context[] => {
   return recordList
@@ -214,15 +219,225 @@ const buildOPF = (qa: OPF, qaTemplate: OPF, columns: string[]) => {
   return qaTemplate;
 };
 
-export const STUDY_MAP: Record<Study, Record<StudyKeys, StudyFunctions>> = {
+export const downloadAssetPromise = async (
+  id: string,
+  filePath: string,
+  onEvent: <T>(channel: Channels, payload: T) => void
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const stream = createWriteStream(filePath, {
+      autoClose: true,
+    });
+
+    let progress: Progress = {
+      id,
+      path: filePath,
+      status: undefined,
+      percentage: 0,
+      message: undefined,
+      name: parse(filePath).base,
+    };
+
+    downloadAsset(id)
+      .then((response) => {
+        progress = {
+          ...progress,
+          status: 'STARTED',
+        };
+
+        onEvent<Progress>(`downloadProgress-${id}`, progress);
+
+        const writer = response.data.pipe(stream);
+        const totalSize = response.headers['content-length'];
+
+        let downloaded = 0;
+
+        response.data.on('data', (data: any) => {
+          downloaded += Buffer.byteLength(data);
+
+          progress = {
+            ...progress,
+            status: 'PROGRESS',
+            percentage: Math.floor((downloaded / parseFloat(totalSize)) * 100),
+          };
+
+          onEvent<Progress>(`downloadProgress-${id}`, progress);
+        });
+
+        response.data.on('end', () => {
+          console.log(`Downloaded Asset ${id}`);
+        });
+
+        writer.on('finish', () => {
+          progress = {
+            ...progress,
+            status: 'DONE',
+            percentage: 100,
+          };
+          onEvent<Progress>(`downloadProgress-${id}`, progress);
+          resolve();
+        });
+
+        return null;
+      })
+      .catch((error) => {
+        console.log(`Error while downloading asset ${id}`, error.message);
+        progress = {
+          ...progress,
+          status: 'ERRORED',
+          message: `${error.message}`,
+        };
+        onEvent<Progress>(`downloadProgress-${id}`, progress);
+        // onError<Asset>(asset.assetId, error);
+        reject();
+      });
+  });
+};
+
+export const getVolumes = async (
+  onEvent: (channel: Channels, payload: string) => void,
+  volumes: string[]
+) => {
+  const volumesMap: Record<string, Volume> = {};
+  for (const volumeId of volumes) {
+    try {
+      onEvent('status', `Fetching Volume ${volumeId} data...`);
+      // eslint-disable-next-line no-await-in-loop
+      const volumeInfo = await getVolumeInfo(volumeId);
+      volumesMap[volumeId] = getVolume(volumeInfo);
+    } catch (error) {
+      console.log(`getVolumes - ${volumeId} - Error`, (error as any).message);
+
+      onEvent('status', `Error while fetching Volume ${volumeId} data...`);
+      volumesMap[volumeId] = {
+        ...defaultVolume,
+        id: volumeId,
+      };
+    }
+  }
+  return volumesMap;
+};
+
+export const getQAFailed = async (
+  onEvent: (channel: Channels, payload: string) => void,
+  folderId = BOX_MAP.QA_FAILED
+) => {
+  try {
+    onEvent('status', 'Fetching Failed QA...');
+    const entries = await ls(folderId);
+    return entries;
+  } catch (error) {
+    console.log('getQAFailed - Error', (error as any).message);
+    onEvent('status', 'Error Fetching Failed QA...');
+  }
+  return [];
+};
+
+export const getQAPassed = async (
+  onEvent: (channel: Channels, payload: string) => void,
+  folderId = BOX_MAP.QA_PASSED
+) => {
+  try {
+    onEvent('status', 'Fetching Passed QA...');
+    const entries = await ls(folderId);
+    return entries;
+  } catch (error) {
+    console.log('getQAPassed - Error', (error as any).message);
+    onEvent('status', 'Error Fetching Passed QA...');
+  }
+
+  return [];
+};
+
+export const getBoxVideos = async (
+  onEvent: (channel: Channels, payload: string) => void,
+  folderId = BOX_MAP.UPLOAD_PASSED_VIDEO
+) => {
+  try {
+    onEvent('status', 'Fetching Box Videos...');
+    const entries = await ls(folderId);
+    return entries;
+  } catch (error) {
+    console.log('getBoxVideos - Error', (error as any).message);
+    onEvent('status', 'Error Fetching Box Videos...');
+  }
+
+  return [];
+};
+
+export const getEntitiesProgress = async (
+  onEvent: (channel: Channels, payload: string) => void,
+  type: Study,
+  folderId: string
+): Promise<Entity[]> => {
+  try {
+    onEvent('status', `Fetching ${type} list...`);
+    const entities: Entity[] = [];
+    const entries = await ls(folderId);
+    for (const entry of entries) {
+      if (entry.name.toLocaleLowerCase().includes('inactive')) continue;
+
+      // eslint-disable-next-line no-await-in-loop
+      const transcriberFolders = await ls(`${entry.id}`);
+      const toDo: EntityProgress = {
+        folderId: undefined,
+        volumes: [],
+      };
+      const inProgress: EntityProgress = {
+        folderId: undefined,
+        volumes: [],
+      };
+      const done: EntityProgress = {
+        folderId: undefined,
+        volumes: [],
+      };
+
+      for (const folder of transcriberFolders) {
+        // eslint-disable-next-line no-await-in-loop
+        if (folder.name === '1_ToBeCoded_DownloadOnly') {
+          toDo.folderId = `${folder.id}`;
+          // eslint-disable-next-line no-await-in-loop
+          toDo.volumes = await ls(toDo.folderId);
+        } else if (folder.name === '2_InProgress') {
+          inProgress.folderId = `${folder.id}`;
+          // eslint-disable-next-line no-await-in-loop
+          inProgress.volumes = await ls(inProgress.folderId);
+        } else if (folder.name === '3_Submitted_CannotEditAnymore') {
+          done.folderId = `${folder.id}`;
+          // eslint-disable-next-line no-await-in-loop
+          done.volumes = await ls(done.folderId);
+        }
+      }
+
+      entities.push({
+        type,
+        name: entry.name.split('_').at(-1) || '',
+        folderId: `${entry.id}`,
+        toDo,
+        inProgress,
+        done,
+      });
+    }
+    return entities;
+  } catch (error) {
+    console.log('getEntitiesProgress - Error', (error as any).message);
+    onEvent('status', `Error Fetching ${type} list...`);
+  }
+  return [];
+};
+
+export const STUDY_MAP: Record<Study, StudyFunctions> = {
   EMO: {
     build: (qaOPF: OPF, template: OPF) =>
       buildOPF(qaOPF, template, ['emo_id_child', 'emo_id_mom']),
     download: async (
-      filePath: string,
       fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_EMO
-    ) => {
-      await downloadFile(fileId, filePath);
+    ): Promise<Buffer> => {
+      const buffer = await downloadBuffer(fileId);
+      return buffer;
+    },
+    buildFileName: (name: string, ext = 'opf') => {
+      return `${name}-emo.${ext}`;
     },
     resolveFilePath: (filePath: ParsedPath) => {
       return resolve(filePath.dir, `${filePath.name}-emo.${filePath.ext}`);
@@ -232,10 +447,13 @@ export const STUDY_MAP: Record<Study, Record<StudyKeys, StudyFunctions>> = {
     build: (qaOPF: OPF, template: OPF) =>
       buildOPF(qaOPF, template, ['loc_id_child', 'loc_id_mom']),
     download: async (
-      filePath: string,
       fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_LOC
-    ) => {
-      await downloadFile(fileId, filePath);
+    ): Promise<Buffer> => {
+      const buffer = await downloadBuffer(fileId);
+      return buffer;
+    },
+    buildFileName: (name: string, ext = 'opf') => {
+      return `${name}-loc.${ext}`;
     },
     resolveFilePath: (filePath: ParsedPath) => {
       return resolve(filePath.dir, `${filePath.name}-loc.${filePath.ext}`);
@@ -245,10 +463,13 @@ export const STUDY_MAP: Record<Study, Record<StudyKeys, StudyFunctions>> = {
     build: (qaOPF: OPF, template: OPF) =>
       buildOPF(qaOPF, template, ['obj_id_child', 'obj_id_mom']),
     download: async (
-      filePath: string,
       fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_OBJ
-    ) => {
-      await downloadFile(fileId, filePath);
+    ): Promise<Buffer> => {
+      const buffer = await downloadBuffer(fileId);
+      return buffer;
+    },
+    buildFileName: (name: string, ext = 'opf') => {
+      return `${name}-obj.${ext}`;
     },
     resolveFilePath: (filePath: ParsedPath) => {
       return resolve(filePath.dir, `${filePath.name}-obj.${filePath.ext}`);
@@ -258,10 +479,13 @@ export const STUDY_MAP: Record<Study, Record<StudyKeys, StudyFunctions>> = {
     build: (qaOPF: OPF, template: OPF) =>
       buildOPF(qaOPF, template, ['transc_id']),
     download: async (
-      filePath: string,
       fileId = BOX_MAP.QA_DATAVYU_TEMPLATE_TRA
-    ) => {
-      await downloadFile(fileId, filePath);
+    ): Promise<Buffer> => {
+      const buffer = await downloadBuffer(fileId);
+      return buffer;
+    },
+    buildFileName: (name: string, ext = 'opf') => {
+      return `${name}-tra.${ext}`;
     },
     resolveFilePath: (filePath: ParsedPath) => {
       return resolve(filePath.dir, `${filePath.name}-tra.${filePath.ext}`);

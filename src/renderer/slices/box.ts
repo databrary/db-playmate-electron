@@ -1,13 +1,18 @@
 import { createSlice, createSelector } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store/store';
-import { Box, BoxEntry, QA } from '../../types';
+import { Box, BoxEntry, Entity, QA, Study } from '../../types';
 
 const initialState: Box = {
   videos: [],
   passed: [],
   failed: [],
-  transcribers: [],
+  studyProgress: {
+    TRA: [],
+    LOC: [],
+    EMO: [],
+    OBJ: [],
+  },
 };
 
 export const boxSlice = createSlice({
@@ -23,8 +28,11 @@ export const boxSlice = createSlice({
     addFailed: (state, action: PayloadAction<BoxEntry[]>) => {
       state.failed = action.payload;
     },
-    addTranscribers: (state, action: PayloadAction<string[]>) => {
-      state.transcribers = action.payload;
+    addStudyProgress: (
+      state,
+      action: PayloadAction<Partial<Record<Study, Entity[]>>>
+    ) => {
+      state.studyProgress = action.payload;
     },
   },
 });
@@ -52,6 +60,6 @@ export const isVideoInBox = createSelector(
   }
 );
 
-export const { addVideos, addPassed, addFailed, addTranscribers } =
+export const { addVideos, addPassed, addFailed, addStudyProgress } =
   boxSlice.actions;
 export default boxSlice.reducer;

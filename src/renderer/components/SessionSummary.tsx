@@ -38,9 +38,9 @@ const SessionSummary = ({ volumeId, session, status = 'UNKNOWN' }: Props) => {
 
   const onOpenExternal = (e: any) => {
     e.stopPropagation();
-    window.electron.ipcRenderer.openExternal(
-      `https://nyu.databrary.org/volume/${volumeId}/slot/${session.id}`
-    );
+    window.electron.ipcRenderer.invoke('openExternal', [
+      `https://nyu.databrary.org/volume/${volumeId}/slot/${session.id}`,
+    ]);
   };
 
   useEffect(() => {

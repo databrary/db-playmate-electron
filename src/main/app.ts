@@ -17,40 +17,32 @@ import {
   dialog,
   OpenDialogOptions,
 } from 'electron';
-import { statSync, createWriteStream } from 'fs';
-import {
-  Progress,
-  Volume,
-  Channels,
-  StudyDownloadFunction,
-  StudyBuildFunction,
-  StudyFileNameFunction,
-  Person,
-  PersonPrgress,
-} from '../types';
+import { statSync, unlinkSync } from 'fs';
+import { Channels, Study } from '../types';
 import MenuBuilder from './menu';
-import { getVolume, STUDY_MAP } from '../util';
+import {
+  downloadAssetPromise,
+  getVolumes,
+  getBoxVideos,
+  getQAFailed,
+  getQAPassed,
+  getEntitiesProgress,
+  STUDY_MAP,
+} from '../util';
 import {
   AppUpdater,
   installExtensions,
   isDebugMode,
   resolveHtmlPath,
 } from './extensions';
-import {
-  getCookies,
-  getVolumeInfo,
-  login,
-  isLoggedIn,
-  downloadAsset,
-} from '../services/databrary-service';
+import { getCookies, login, isLoggedIn } from '../services/databrary-service';
 import {
   downloadFile,
   downloadBuffer,
-  ls,
   uploadChunkFile,
   uploadFile,
 } from '../services/box-service';
-import { BOX_MAP, defaultVolume } from '../constants';
+import { BOX_MAP } from '../constants';
 import { Cell, OPF } from '../OPF';
 import envVariables from '../../env.json';
 
@@ -90,6 +82,32 @@ const onEvent = <T>(channel: Channels, payload: T) => {
   appWindow.webContents.send(channel, payload);
 };
 
+ipcMain.handle('assign', async (event, args: any[]) => {
+  const { type, volumeId, sessionId, entity, passedQaFileId } = args[0];
+
+  console.log('ASSIGN ARG', args[0]);
+
+  const qaBuffer = await downloadBuffer(passedQaFileId);
+  const qaOPF = OPF.readOPF(qaBuffer, `PLAY_${volumeId}_${sessionId}.opf`);
+
+  const templateBuffer = await STUDY_MAP[type as Study].download();
+  const templateOPF = OPF.readOPF(
+    templateBuffer,
+    STUDY_MAP[type as Study].buildFileName(`PLAY_${volumeId}_${sessionId}`)
+  );
+
+  const newOPF = STUDY_MAP[type as Study].build(qaOPF, templateOPF);
+  OPF.writeOPF(newOPF.name, newOPF);
+
+  await uploadFile(entity.toDo.folderId, newOPF.name, newOPF.name);
+  unlinkSync(newOPF.name);
+});
+
+ipcMain.handle('openExternal', async (event, args: any[]) => {
+  const url = args[0];
+  shell.openExternal(url);
+});
+
 ipcMain.handle('uploadFile', async (event, args: any[]) => {
   if (args.length !== 1) throw Error(`More that one box folder was provided`);
   const folderId = args[0];
@@ -102,29 +120,6 @@ ipcMain.handle('uploadFile', async (event, args: any[]) => {
     folderId,
     filePaths[0],
     path.basename(filePaths[0])
-  );
-
-  if (folderId === BOX_MAP.QA_FAILED) {
-    return file;
-  }
-
-  const qaOPF = OPF.readOPF(filePaths[0]);
-
-  Object.entries(STUDY_MAP).forEach(
-    async ([key, { download, build, resolveFilePath }]) => {
-      const newFilePath = (resolveFilePath as StudyFileNameFunction)(
-        path.parse(filePaths[0])
-      );
-
-      await (download as StudyDownloadFunction)(newFilePath);
-
-      const newOPF = (build as StudyBuildFunction)(
-        qaOPF,
-        OPF.readOPF(newFilePath)
-      );
-
-      OPF.writeOPF(newFilePath, newOPF);
-    }
   );
 });
 
@@ -148,12 +143,12 @@ ipcMain.handle('uploadVideo', async (event, args: any[]) => {
       filePaths[0],
       `${args[0]}.mp4`
     );
-    uploader.on('uploadComplete', (_) =>
+    uploader.on('uploadComplete', () =>
       onEvent<number>('uploadVideoDone', 100)
     );
 
     let uploaded = 0;
-    uploader.on('chunkUploaded', (chunk) => {
+    uploader.on('chunkUploaded', (chunk: any) => {
       uploaded += chunk.part.size;
       onEvent('uploadVideoProgress', Math.floor((uploaded / fileSize) * 100));
     });
@@ -177,7 +172,7 @@ ipcMain.handle('downloadOPF', async (event, args: any[]) => {
       try {
         // eslint-disable-next-line no-await-in-loop
         await downloadFile(BOX_MAP.QA_DATAVYU_TEMPLATE, localFilePath);
-        const qaOPF = OPF.readOPF(localFilePath);
+        const qaOPF = OPF.readOPF(localFilePath, `${template.fileName}.opf`);
         const playId = [
           `PLAY_${template.volumeId}_${template.sessionId}`,
           new Date(template.birthdate).toLocaleDateString('en-US', {
@@ -228,82 +223,6 @@ ipcMain.handle('downloadOPF', async (event, args: any[]) => {
   }
 });
 
-// TODO: Manage errors
-const downloadAssetPromise = async (
-  id: string,
-  filePath: string,
-  onEvent: <T>(channel: Channels, payload: T) => void
-): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const stream = createWriteStream(filePath, {
-      autoClose: true,
-    });
-
-    let progress: Progress = {
-      id,
-      path: filePath,
-      status: undefined,
-      percentage: 0,
-      message: undefined,
-      name: path.parse(filePath).base,
-    };
-
-    downloadAsset(id)
-      .then((response) => {
-        progress = {
-          ...progress,
-          status: 'STARTED',
-        };
-
-        onEvent<Progress>(`downloadProgress-${id}`, progress);
-
-        const writer = response.data.pipe(stream);
-        const totalSize = response.headers['content-length'];
-
-        let downloaded = 0;
-
-        response.data.on('data', (data: any) => {
-          downloaded += Buffer.byteLength(data);
-
-          progress = {
-            ...progress,
-            status: 'PROGRESS',
-            percentage: Math.floor((downloaded / parseFloat(totalSize)) * 100),
-          };
-
-          onEvent<Progress>(`downloadProgress-${id}`, progress);
-        });
-
-        response.data.on('end', () => {
-          console.log(`Downloaded Asset ${id}`);
-        });
-
-        writer.on('finish', () => {
-          progress = {
-            ...progress,
-            status: 'DONE',
-            percentage: 100,
-          };
-          onEvent<Progress>(`downloadProgress-${id}`, progress);
-          resolve();
-        });
-
-        return null;
-      })
-      .catch((error) => {
-        console.log(`Error while downloading asset ${id}`, error.message);
-        progress = {
-          ...progress,
-          status: 'ERRORED',
-          message: `${error.message}`,
-        };
-        onEvent<Progress>(`downloadProgress-${id}`, progress);
-        // onError<Asset>(asset.assetId, error);
-        reject();
-      });
-  });
-};
-
 ipcMain.handle('downloadAssets', async (event, args: any[]) => {
   if (!getCookies()) throw Error('You must be logged into Databrary');
 
@@ -325,135 +244,21 @@ ipcMain.handle('downloadAssets', async (event, args: any[]) => {
   }
 });
 
-const getVolumes = async (volumes: string[]) => {
-  const volumesMap: Record<string, Volume> = {};
-  for (const volumeId of volumes) {
-    try {
-      onEvent('status', `Fetching Volume ${volumeId} data...`);
-      // eslint-disable-next-line no-await-in-loop
-      const volumeInfo = await getVolumeInfo(volumeId);
-      volumesMap[volumeId] = getVolume(volumeInfo);
-    } catch (error) {
-      console.log(`getVolumes - ${volumeId} - Error`, (error as any).message);
-
-      onEvent('status', `Error while fetching Volume ${volumeId} data...`);
-      volumesMap[volumeId] = {
-        ...defaultVolume,
-        id: volumeId,
-      };
-    }
-  }
-  return volumesMap;
-};
-
-const getBoxVideos = async (folderId = BOX_MAP.UPLOAD_PASSED_VIDEO) => {
-  try {
-    onEvent('status', 'Fetching Box Videos...');
-    const entries = await ls(folderId);
-    return entries;
-  } catch (error) {
-    console.log('getBoxVideos - Error', (error as any).message);
-    onEvent('status', 'Error Fetching Box Videos...');
-  }
-
-  return [];
-};
-
-const getQAPassed = async (folderId = BOX_MAP.QA_PASSED) => {
-  try {
-    onEvent('status', 'Fetching Passed QA...');
-    const entries = await ls(folderId);
-    return entries;
-  } catch (error) {
-    console.log('getQAPassed - Error', (error as any).message);
-    onEvent('status', 'Error Fetching Passed QA...');
-  }
-
-  return [];
-};
-
-const getTranscribers = async (
-  folderId = BOX_MAP.TRANSCRIBERS
-): Promise<Person[]> => {
-  try {
-    onEvent('status', 'Fetching Transcribers list...');
-    const transcribers: Person[] = [];
-    const entries = await ls(folderId);
-    for (const entry of entries) {
-      if (entry.name.toLocaleLowerCase().includes('inactive')) continue;
-
-      // eslint-disable-next-line no-await-in-loop
-      const transcriberFolders = await ls(`${entry.id}`);
-      const toDo: PersonPrgress = {
-        folderId: undefined,
-        volumes: [],
-      };
-      const inProgress: PersonPrgress = {
-        folderId: undefined,
-        volumes: [],
-      };
-      const done: PersonPrgress = {
-        folderId: undefined,
-        volumes: [],
-      };
-
-      for (const folder of transcriberFolders) {
-        // eslint-disable-next-line no-await-in-loop
-        if (folder.name === '1_ToBeCoded_DownloadOnly') {
-          toDo.folderId = `${folder.id}`;
-          // eslint-disable-next-line no-await-in-loop
-          toDo.volumes = await ls(toDo.folderId);
-        } else if (folder.name === '2_InProgress') {
-          inProgress.folderId = `${folder.id}`;
-          // eslint-disable-next-line no-await-in-loop
-          inProgress.volumes = await ls(inProgress.folderId);
-        } else if (folder.name === '3_Submitted_CannotEditAnymore') {
-          done.folderId = `${folder.id}`;
-          // eslint-disable-next-line no-await-in-loop
-          done.volumes = await ls(done.folderId);
-        }
-      }
-
-      transcribers.push({
-        type: 'TRA',
-        name: entry.name.split('_').at(-1),
-        folderId: `${entry.id}`,
-        toDo,
-        inProgress,
-        done,
-      });
-    }
-    return transcribers;
-  } catch (error) {
-    console.log('getTranscribers - Error', (error as any).message);
-    onEvent('status', 'Error Fetching Transcribers list...');
-  }
-  return [];
-};
-
-const getQAFailed = async (folderId = BOX_MAP.QA_FAILED) => {
-  try {
-    onEvent('status', 'Fetching Failed QA...');
-    const entries = await ls(folderId);
-    return entries;
-  } catch (error) {
-    console.log('getQAFailed - Error', (error as any).message);
-    onEvent('status', 'Error Fetching Failed QA...');
-  }
-  return [];
-};
-
 ipcMain.handle('loadData', async (event, args) => {
   if (!getCookies()) throw Error('You must be logged into Databrary');
 
   const buffer = await downloadBuffer(BOX_MAP.VOLUMES);
   const volumesList = JSON.parse(buffer.toString('utf8'));
 
-  const volumes = await getVolumes(volumesList);
-  const videos = await getBoxVideos();
-  const passed = await getQAPassed();
-  const failed = await getQAFailed();
-  const transcribers = await getTranscribers();
+  const volumes = await getVolumes(onEvent, volumesList);
+  const videos = await getBoxVideos(onEvent);
+  const passed = await getQAPassed(onEvent);
+  const failed = await getQAFailed(onEvent);
+  const transcribers = await getEntitiesProgress(
+    onEvent,
+    'TRA',
+    BOX_MAP.TRANSCRIBERS
+  );
 
   return {
     databrary: { volumes },
@@ -461,7 +266,9 @@ ipcMain.handle('loadData', async (event, args) => {
       videos,
       passed,
       failed,
-      transcribers,
+      studyProgress: {
+        TRA: transcribers,
+      },
     },
   };
 });

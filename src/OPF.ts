@@ -91,7 +91,7 @@ export class Column {
   };
 
   public addCells = (cells: Cell[]) => {
-    this._cells.push(cells);
+    this._cells.push(...cells);
   };
 
   public toString = (): string => {
@@ -149,8 +149,8 @@ export class OPF {
     return path.basename(filePath).split('.')[0];
   };
 
-  static readOPF = (filePath: string) => {
-    const zip = new Zip(filePath);
+  static readOPF = (fileNameOrRawData: string | Buffer, fileName: string) => {
+    const zip = new Zip(fileNameOrRawData);
     const db: IZipEntry | null = zip.getEntry('db');
 
     if (!db) throw new Error('Cannot find db file in the OPF file');
@@ -162,11 +162,7 @@ export class OPF {
       projectContent = zip.readAsText(project);
     }
 
-    return new OPF(
-      OPF.getName(filePath),
-      OPF.getColumns(contentList),
-      projectContent
-    );
+    return new OPF(OPF.getColumns(contentList), projectContent, fileName);
   };
 
   static writeOPF = (filePath: string, opf: OPF) => {
@@ -182,7 +178,7 @@ export class OPF {
     zip.writeZip(filePath);
   };
 
-  private constructor(name: string, columns: Column[], project: string) {
+  private constructor(columns: Column[], project: string, name: string) {
     this._columns = columns.reduce(
       (a, v) => ({ ...a, [v.name.toLowerCase()]: v }),
       {}

@@ -13,7 +13,6 @@ import {
   CssBaseline,
   Box,
   Tooltip,
-  FormLabel,
   ToggleButtonGroup,
   ToggleButton,
 } from '@mui/material';
@@ -21,12 +20,14 @@ import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
 import MenuIcon from '@mui/icons-material/Menu';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+import SortByAlphaIcon from '@mui/icons-material/SortByAlpha';
 import { drawerWidth } from '../constants';
 import DrawerHeader from './DrawerHeader';
-import DownloadMenu from './DownloadMenu';
 import { useAppSelector } from '../hooks/store';
 import { RootState } from '../store/store';
 import { Volume } from '../../types';
+import logo from '../../../assets/logo.png';
 
 type LocalVolume = Volume & {
   site: string | undefined;
@@ -50,6 +51,7 @@ const AppBar = styled(MuiAppBar, {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
+  backgroundColor: 'white',
   ...(open && {
     width: `calc(100% - ${drawerWidth}px)`,
     marginLeft: `${drawerWidth}px`,
@@ -151,11 +153,14 @@ const Navigation = ({
             edge="start"
             sx={{ mr: 2, ...(open && { display: 'none' }) }}
           >
-            <MenuIcon />
+            <MenuIcon sx={{ color: 'green' }} />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
-            Play Project
-          </Typography>
+          <Box
+            component="img"
+            sx={{ height: 55, width: 105 }}
+            alt="Your logo."
+            src={logo}
+          />
           <Box
             sx={{
               display: 'flex',
@@ -170,10 +175,10 @@ const Navigation = ({
                 onClick={onRefresh}
                 edge="end"
               >
-                <RefreshIcon />
+                <RefreshIcon sx={{ color: 'green' }} />
               </IconButton>
             </Tooltip>
-            <DownloadMenu />
+            {/* <DownloadMenu /> */}
           </Box>
         </Toolbar>
       </AppBar>
@@ -200,33 +205,35 @@ const Navigation = ({
           >
             Volumes
           </Typography>
+          <Box
+            sx={{
+              mx: 2,
+              my: 1,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <ToggleButtonGroup
+              color="primary"
+              value={sortBy}
+              exclusive
+              onChange={onSortBy}
+              aria-label="text alignment"
+              size="small"
+            >
+              <ToggleButton value="volume">
+                <FormatListNumberedIcon />
+              </ToggleButton>
+              <ToggleButton value="site">
+                <SortByAlphaIcon />
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
           <IconButton onClick={onCloseDrawer}>
-            <ChevronLeftIcon />
+            <ChevronLeftIcon sx={{ color: 'green' }} />
           </IconButton>
         </DrawerHeader>
-        <Divider />
-        <Box
-          sx={{
-            mx: 2,
-            my: 1,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <FormLabel>Sort by:</FormLabel>
-          <ToggleButtonGroup
-            color="primary"
-            value={sortBy}
-            exclusive
-            onChange={onSortBy}
-            aria-label="text alignment"
-            size="small"
-          >
-            <ToggleButton value="volume">Volume</ToggleButton>
-            <ToggleButton value="site">Site</ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
         <Divider />
         <List>
           {localVolumes.map((volume: LocalVolume) => (

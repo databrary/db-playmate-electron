@@ -12,7 +12,7 @@ import {
   addVideos,
   addFailed,
   addPassed,
-  addTranscribers,
+  addStudyProgress,
 } from '../slices/box';
 import { Play } from '../../types';
 
@@ -59,13 +59,13 @@ const Dashboard = () => {
       .then(
         ({
           databrary: { volumes },
-          box: { videos, passed, failed, transcribers },
+          box: { videos, passed, failed, studyProgress },
         }) => {
           dispatch(addVolumes(volumes || {}));
           dispatch(addVideos(videos || []));
           dispatch(addPassed(passed || []));
           dispatch(addFailed(failed || []));
-          dispatch(addTranscribers(transcribers || []));
+          dispatch(addStudyProgress(studyProgress || {}));
         }
       )
       .finally(() => {

@@ -5,7 +5,10 @@ import { Cell, OPF } from '../OPF';
 
 describe('test insert in OPF', () => {
   it('should load OPF FIle and read it content', () => {
-    const opf = OPF.readOPF(path.resolve('src', '__tests__', 'test_read.opf'));
+    const opf = OPF.readOPF(
+      path.resolve('src', '__tests__', 'test_read.opf'),
+      'test_read.opf'
+    );
     console.log('OPF', opf.toString());
     console.log('PLAY Column', opf.column('play_id').toString());
     opf

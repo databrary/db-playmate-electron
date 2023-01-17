@@ -77,18 +77,19 @@ export type BoxEntry = {
   };
 };
 
-export type PersonPrgress = {
+export type EntityProgress = {
   folderId: string | undefined;
   volumes: BoxEntry[];
 };
 
-export type Person = {
+// Could be a person or an institution
+export type Entity = {
   type: Study;
-  name: string | undefined;
+  name: string;
   folderId: string;
-  toDo: PersonPrgress;
-  inProgress: PersonPrgress;
-  done: PersonPrgress;
+  toDo: EntityProgress;
+  inProgress: EntityProgress;
+  done: EntityProgress;
 };
 
 export type Status = 'STARTED' | 'PROGRESS' | 'ERRORED' | 'DONE' | undefined;
@@ -111,7 +112,7 @@ export type Box = {
   videos: BoxEntry[];
   passed: BoxEntry[];
   failed: BoxEntry[];
-  transcribers: string[];
+  studyProgress: Partial<Record<Study, Entity[]>>;
 };
 
 export type Play = {
@@ -120,19 +121,23 @@ export type Play = {
 };
 
 export type StudyBuildFunction = (qaOPF: OPF, template: OPF) => OPF;
-export type StudyDownloadFunction = (
-  filePath: string,
-  fileId?: string
-) => Promise<void>;
-export type StudyFileNameFunction = (filePath: ParsedPath) => string;
+export type StudyDownloadFunction = (fileId?: string) => Promise<Buffer>;
+export type StudyFilePathFunction = (filePath: ParsedPath) => string;
+export type StudyFileNameFunction = (name: string, ext?: string) => string;
 
 export type QA = 'FAILED' | 'PASSED' | 'UNKNOWN';
 export type Study = 'EMO' | 'TRA' | 'OBJ' | 'LOC';
-export type StudyKeys = 'build' | 'download' | 'resolveFilePath';
-export type StudyFunctions =
-  | StudyBuildFunction
-  | StudyDownloadFunction
-  | StudyFileNameFunction;
+export type StudyStatus = 'DONE' | 'INPROGRESS' | 'TODO';
+export type StudyKeys =
+  | 'build'
+  | 'download'
+  | 'resolveFilePath'
+  | 'buildFileName';
+export type StudyFunctions = { build: StudyBuildFunction } & {
+  download: StudyDownloadFunction;
+} & { resolveFilePath: StudyFilePathFunction } & {
+  buildFileName: StudyFileNameFunction;
+};
 
 export type DownloadProgress = `downloadProgress-${string}`;
 type BoxUploadEvents =
@@ -154,4 +159,6 @@ export type Channels =
   | 'downloadedOPF'
   | 'uploadFile'
   | 'uploadVideo'
-  | BoxUploadEvents;
+  | BoxUploadEvents
+  | 'openExternal'
+  | 'assign';
