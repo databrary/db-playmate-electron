@@ -1,5 +1,5 @@
 {
-  "description": "A foundation for scalable desktop apps",
+  "description": "Databrary Playmate",
   "license": "MIT",
   "main": "./src/main/main.ts",
   "scripts": {

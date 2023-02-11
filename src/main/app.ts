@@ -89,7 +89,6 @@ ipcMain.handle('assign', async (event, args: any[]) => {
 
   const qaBuffer = await downloadBuffer(passedQaFileId);
   const qaOPF = OPF.readOPF(qaBuffer, `PLAY_${volumeId}_${sessionId}.opf`);
-
   const templateBuffer = await STUDY_MAP[type as Study].download();
   const templateOPF = OPF.readOPF(
     templateBuffer,
@@ -97,9 +96,13 @@ ipcMain.handle('assign', async (event, args: any[]) => {
   );
 
   const newOPF = STUDY_MAP[type as Study].build(qaOPF, templateOPF);
-  OPF.writeOPF(newOPF.name, newOPF);
+  OPF.writeOPF(path.resolve(app.getPath('temp'), newOPF.name), newOPF);
 
-  await uploadFile(entity.toDo.folderId, newOPF.name, newOPF.name);
+  await uploadFile(
+    entity.toDo.folderId,
+    path.resolve(app.getPath('temp'), newOPF.name),
+    newOPF.name
+  );
   unlinkSync(newOPF.name);
 });
 

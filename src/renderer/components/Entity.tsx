@@ -96,6 +96,7 @@ const Entity = ({
         value={selected}
         onChange={handleChange}
         sx={{ my: 'auto' }}
+        disabled={!!isAssigned}
       >
         <MenuItem value="">
           <em>None</em>
@@ -107,7 +108,12 @@ const Entity = ({
         ))}
       </Select>
       <Typography>Status: {selectedEntity?.status}</Typography>
-      <Button onClick={onClick} variant="contained" sx={{ mt: 'auto' }}>
+      <Button
+        disabled={!!isAssigned}
+        onClick={onClick}
+        variant="contained"
+        sx={{ mt: 'auto' }}
+      >
         Assign
       </Button>
     </FormControl>

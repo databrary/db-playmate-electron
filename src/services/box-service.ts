@@ -187,7 +187,7 @@ const downloadBuffer = async (fielId: string): Promise<any> => {
 };
 
 const ls = async (folderId: string): Promise<BoxEntry[]> => {
-  const items = await client.folders.getItems(folderId);
+  const items = await client.folders.getItems(folderId, { limit: 1000 });
   return items.entries || [];
 };
 
