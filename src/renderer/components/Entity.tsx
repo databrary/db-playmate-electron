@@ -36,8 +36,8 @@ const Entity = ({
   const [selected, setSelected] = useState<string>('');
 
   const [selectedEntity, setSelectedEntity] = useState<
-    EntityType & EntityStatus
-  >();
+    (EntityType & EntityStatus) | undefined
+  >(undefined);
 
   const findSelectedEntity = (name: string) => {
     return (enitityList || []).find((t) => t.name === name);
@@ -47,7 +47,7 @@ const Entity = ({
     setSelectedEntity(findSelectedEntity(event.target.value));
   };
 
-  useEffect(() => {
+  const isSessionAssigned = (enitityList) => {
     let found: (EntityType & EntityStatus) | undefined;
     enitityList.forEach((entity) => {
       const result = isAssigned(entity);
@@ -59,7 +59,11 @@ const Entity = ({
       return false;
     });
 
-    setSelectedEntity(found);
+    return found;
+  };
+
+  useEffect(() => {
+    setSelectedEntity(isSessionAssigned(enitityList));
   }, [enitityList]);
 
   useEffect(() => {
@@ -96,7 +100,7 @@ const Entity = ({
         value={selected}
         onChange={handleChange}
         sx={{ my: 'auto' }}
-        disabled={!!isAssigned}
+        disabled={!!isSessionAssigned(enitityList)}
       >
         <MenuItem value="">
           <em>None</em>
@@ -109,7 +113,7 @@ const Entity = ({
       </Select>
       <Typography>Status: {selectedEntity?.status}</Typography>
       <Button
-        disabled={!!isAssigned}
+        disabled={!!isSessionAssigned(enitityList)}
         onClick={onClick}
         variant="contained"
         sx={{ mt: 'auto' }}
