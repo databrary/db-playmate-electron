@@ -11,12 +11,7 @@ import {
   Tab,
   Typography,
 } from '@mui/material';
-import { useSnackbar } from 'notistack';
-import {
-  Asset as AssetType,
-  Entity as EntityType,
-  Session as SessionType,
-} from '../../types';
+import { Asset as AssetType, Session as SessionType } from '../../types';
 import Asset from './Asset';
 import SessionSummary from './SessionSummary';
 import SessionActions from './SessionActions';
@@ -75,8 +70,6 @@ const Session = ({ session, volumeId, volumeName }: Props) => {
 
   const [value, setValue] = useState(0);
   const [assetMap, setAssetMap] = useState<Record<number, AssetType>>({});
-
-  const { enqueueSnackbar } = useSnackbar();
 
   const handleChange = (event: SyntheticEvent, newValue: number) => {
     setValue(newValue);
@@ -138,84 +131,14 @@ const Session = ({ session, volumeId, volumeName }: Props) => {
           </TabPanel>
           <TabPanel value={value} index={1}>
             <Entity
-              type="TRA"
-              isAssigned={(entity: EntityType) => {
-                const { toDo, inProgress, done } = entity;
-                if (
-                  done.volumes.some((volume) =>
-                    volume.name.includes(`${volumeId}_${session.id}`)
-                  )
-                ) {
-                  return {
-                    ...entity,
-                    status: 'DONE',
-                  };
-                }
-
-                if (
-                  inProgress.volumes.some((volume) =>
-                    volume.name.includes(`${volumeId}_${session.id}`)
-                  )
-                ) {
-                  return {
-                    ...entity,
-                    status: 'INPROGRESS',
-                  };
-                }
-
-                if (
-                  toDo.volumes.some((volume) =>
-                    volume.name.includes(`${volumeId}_${session.id}`)
-                  )
-                ) {
-                  return {
-                    ...entity,
-                    status: 'TODO',
-                  };
-                }
-
-                return undefined;
-              }}
-              onAssign={(entity: EntityType) => {
-                const passedQaFileId = passed.find((el) =>
+              passedQaFileId={
+                passed.find((el) =>
                   el.name.includes(`${volumeId}_${session.id}`)
-                )?.id;
-
-                if (!passedQaFileId) {
-                  enqueueSnackbar(
-                    `Cannot find in box the QA file for session ${session.id} to transcriber`,
-                    {
-                      variant: 'error',
-                    }
-                  );
-                  return;
-                }
-
-                window.electron.ipcRenderer
-                  .invoke('assign', [
-                    {
-                      volumeId,
-                      sessionId: session.id,
-                      type: entity.type,
-                      passedQaFileId,
-                      entity,
-                    },
-                  ])
-                  .then((response) => {
-                    enqueueSnackbar(
-                      `Transcriber ${entity.name} assigned to session ${session.id}`,
-                      { variant: 'success' }
-                    );
-                  })
-                  .catch((error) => {
-                    enqueueSnackbar(
-                      `Error assigning session ${session.id} to transcriber`,
-                      {
-                        variant: 'error',
-                      }
-                    );
-                  });
-              }}
+                )?.id
+              }
+              session={session}
+              volumeId={volumeId}
+              type="TRA"
             >
               <Typography>
                 Please select a transcriber from the following list:

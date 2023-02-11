@@ -8,7 +8,14 @@ import {
   Typography,
 } from '@mui/material';
 import { ReactNode, useEffect, useState } from 'react';
-import { Entity as EntityType, Study, StudyStatus } from '../../types';
+import { useSnackbar } from 'notistack';
+import {
+  Entity as EntityType,
+  Session as SessionType,
+  Study,
+  StudyStatus,
+} from '../../types';
+
 import { useAppSelector } from '../hooks/store';
 import { RootState } from '../store/store';
 
@@ -18,15 +25,17 @@ type EntityStatus = {
 
 type EntityProps = {
   type: Study;
-  onAssign: (entity: EntityType) => void;
-  isAssigned: (entity: EntityType) => (EntityType & EntityStatus) | undefined;
+  session: SessionType;
+  volumeId: string;
+  passedQaFileId: number | undefined;
   children: ReactNode | undefined;
 };
 
 const Entity = ({
   type,
-  onAssign,
-  isAssigned,
+  session,
+  volumeId,
+  passedQaFileId = undefined,
   children = undefined,
 }: EntityProps) => {
   const enitityList: EntityType[] = useAppSelector(
@@ -34,10 +43,12 @@ const Entity = ({
   );
 
   const [selected, setSelected] = useState<string>('');
+  const [dirty, setDirty] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
 
   const [selectedEntity, setSelectedEntity] = useState<
-    (EntityType & EntityStatus) | undefined
-  >(undefined);
+    EntityType & EntityStatus
+  >();
 
   const findSelectedEntity = (name: string) => {
     return (enitityList || []).find((t) => t.name === name);
@@ -47,8 +58,85 @@ const Entity = ({
     setSelectedEntity(findSelectedEntity(event.target.value));
   };
 
-  const isSessionAssigned = (enitityList) => {
-    let found: (EntityType & EntityStatus) | undefined;
+  const isAssigned = (entity: EntityType) => {
+    const { toDo, inProgress, done } = entity;
+    if (
+      done.volumes.some((volume) =>
+        volume.name.includes(`${volumeId}_${session.id}`)
+      )
+    ) {
+      return {
+        ...entity,
+        status: 'DONE',
+      };
+    }
+
+    if (
+      inProgress.volumes.some((volume) =>
+        volume.name.includes(`${volumeId}_${session.id}`)
+      )
+    ) {
+      return {
+        ...entity,
+        status: 'INPROGRESS',
+      };
+    }
+
+    if (
+      toDo.volumes.some((volume) =>
+        volume.name.includes(`${volumeId}_${session.id}`)
+      )
+    ) {
+      return {
+        ...entity,
+        status: 'TODO',
+      };
+    }
+
+    return undefined;
+  };
+
+  const onAssign = (entity: EntityType) => {
+    if (!passedQaFileId) {
+      enqueueSnackbar(
+        `Cannot find in box the QA file for session ${session.id} to transcriber`,
+        {
+          variant: 'error',
+        }
+      );
+      return;
+    }
+
+    window.electron.ipcRenderer
+      .invoke('assign', [
+        {
+          volumeId,
+          sessionId: session.id,
+          type: entity.type,
+          passedQaFileId,
+          entity,
+        },
+      ])
+      .then((response) => {
+        enqueueSnackbar(
+          `Transcriber ${entity.name} assigned to session ${session.id}`,
+          { variant: 'success' }
+        );
+        setDirty(true);
+      })
+      .catch((error) => {
+        enqueueSnackbar(
+          `Error assigning session ${session.id} to transcriber`,
+          {
+            variant: 'error',
+          }
+        );
+      });
+  };
+
+  const isSessionAssigned = (enitityList: EntityType[]) => {
+    let found: EntityType & EntityStatus;
+
     enitityList.forEach((entity) => {
       const result = isAssigned(entity);
 
@@ -100,7 +188,7 @@ const Entity = ({
         value={selected}
         onChange={handleChange}
         sx={{ my: 'auto' }}
-        disabled={!!isSessionAssigned(enitityList)}
+        disabled={!!isSessionAssigned(enitityList) || dirty}
       >
         <MenuItem value="">
           <em>None</em>
@@ -113,7 +201,7 @@ const Entity = ({
       </Select>
       <Typography>Status: {selectedEntity?.status}</Typography>
       <Button
-        disabled={!!isSessionAssigned(enitityList)}
+        disabled={!!isSessionAssigned(enitityList) || dirty}
         onClick={onClick}
         variant="contained"
         sx={{ mt: 'auto' }}

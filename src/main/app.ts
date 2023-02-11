@@ -103,7 +103,6 @@ ipcMain.handle('assign', async (event, args: any[]) => {
     path.resolve(app.getPath('temp'), newOPF.name),
     newOPF.name
   );
-  unlinkSync(newOPF.name);
 });
 
 ipcMain.handle('openExternal', async (event, args: any[]) => {
